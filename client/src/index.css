@@ -1,0 +1,79 @@
+/* Custom cursor styles */
+.custom-cursor {
+  position: fixed;
+  width: 20px;
+  height: 20px;
+  background: rgba(25, 118, 210, 0.1);
+  border: 2px solid #1976d2;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transition: all 0.1s ease;
+  opacity: 0;
+}
+
+.cursor-dot {
+  position: fixed;
+  width: 4px;
+  height: 4px;
+  background: #1976d2;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 10000;
+  transition: all 0.15s ease;
+  opacity: 0;
+}
+
+.cursor-target {
+  cursor: none;
+}
+
+.cursor-target:hover {
+  cursor: none;
+}
+
+/* Hide default cursor for cursor-target elements */
+.cursor-target * {
+  cursor: none !important;
+}
+
+/* Basic reset and global styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Remove smooth scrolling */
+html {
+  scroll-behavior: auto;
+}
+
+/* Hide scrollbar */
+::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for Firefox */
+* {
+  scrollbar-width: none;
+}
+
+/* Hide scrollbar for IE and Edge */
+* {
+  -ms-overflow-style: none;
+}
