@@ -61,37 +61,50 @@ const Header = () => {
   return (
     <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
       <Container maxWidth="xl">
-        <Toolbar disableGutters sx={{ minHeight: 64, px: 2 }}>
-
-          {/* ✅ Square, readable logo - fits red box area */}
+        <Toolbar sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          {/* ✅ Logo Section */}
           <Box
-            component="img"
-            src="/assets/image3.png"
-            alt="MaintaBIT Logo"
-            onClick={() => navigate('/')}
             sx={{
-              height: 56,           // same as header height (adjust if needed)
-              width: 56,            // square size
-              objectFit: 'contain', // image scales cleanly
-              cursor: 'pointer',
-              mr: 2,
+              height: 72,
+              position: 'relative',
+              display: 'flex',
+              alignItems: 'center',
+              px: 2,
+              minWidth: '120px', // Reserve space for centering nav
             }}
-          />
+          >
+            <Box
+              component="img"
+              src="/assets/image3.png"
+              alt="Logo"
+              onClick={() => navigate('/')}
+              sx={{
+                height: '48px',
+                width: 'auto',
+                maxHeight: '48px',
+                transform: 'none',
+                cursor: 'pointer',
+              }}
+            />
+          </Box>
 
+          {/* ✅ Centered Navigation */}
           {/* ✅ Centered Desktop Navigation */}
           <Box
             sx={{
-              flexGrow: 1,
+              position: 'absolute',           // ✅ nav ko screen center me fix karega
+              left: '50%',                    // ✅ screen ke exact center
+              transform: 'translateX(-50%)',  // ✅ us center se thoda piche laayega to fully center dikhe
               display: { xs: 'none', md: 'flex' },
-              justifyContent: 'center',
+              gap: 2,
             }}
           >
+
             {visibleNavigationItems.map((item) => (
               <Button
                 key={item.path}
                 onClick={() => handleNavigation(item.path)}
                 sx={{
-                  mx: 1,
                   px: 2,
                   fontSize: '0.95rem',
                   fontWeight: 500,
@@ -111,8 +124,16 @@ const Header = () => {
             ))}
           </Box>
 
-          {/* ✅ User Avatar / Login Button */}
-          <Box sx={{ flexGrow: 0 }}>
+          {/* ✅ Avatar or Login */}
+          <Box
+            sx={{
+              flexGrow: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+              minWidth: '120px', // Reserve space for centering nav
+            }}
+          >
             {isAuthenticated ? (
               <>
                 <IconButton onClick={handleProfileMenuOpen} sx={{ p: 0 }}>
