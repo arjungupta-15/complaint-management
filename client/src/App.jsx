@@ -15,6 +15,11 @@ import Contact from './pages/Contact';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import FeedbackForm from './pages/FeedbackForm';
 import Studentdash from './pages/Studentdash'
+import AllComplaints from './pages/AllComplaints';
+import ResolvedComplaints from './pages/ResolvedComplaints';
+import PendingComplaints from './pages/PendingComplaints';
+import ReopenedComplaints from './pages/ReopendComplaints';
+import EscalatedComplaints from './pages/EscalatedComplaints';
 
 // Create theme
 const theme = createTheme({
@@ -141,6 +146,11 @@ function App() {
                 <Route path="/login" element={<Login />} />
                 <Route path="/faqs" element={<FAQs />} />
                 <Route path="/contact" element={<Contact />} />
+                <Route path="/all-complaints" element={<AllComplaints />} />
+                <Route path="/resolved-complaints" element={<ResolvedComplaints />} />
+                <Route path="pending-complaints" element={<PendingComplaints/>}/>
+                <Route path="reopen-complaints" element={<ReopenedComplaints/>}/>
+                <Route path="escalated-complaints" element={<EscalatedComplaints/>}/>"
                 
                 {/* Protected Routes (need authentication) */}
                 <Route path="/submit-complaint" element={
