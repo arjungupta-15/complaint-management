@@ -76,62 +76,6 @@ const ProtectedRoute = ({ children }) => {
 };
 
 function App() {
-  useEffect(() => {
-    // Custom cursor effect
-    const cursor = document.createElement('div');
-    cursor.className = 'custom-cursor';
-    document.body.appendChild(cursor);
-
-    const cursorDot = document.createElement('div');
-    cursorDot.className = 'cursor-dot';
-    document.body.appendChild(cursorDot);
-
-    const handleMouseMove = (e) => {
-      cursor.style.left = e.clientX + 'px';
-      cursor.style.top = e.clientY + 'px';
-      cursorDot.style.left = e.clientX + 'px';
-      cursorDot.style.top = e.clientY + 'px';
-    };
-
-    const handleMouseEnter = () => {
-      cursor.style.opacity = '1';
-      cursorDot.style.opacity = '1';
-    };
-
-    const handleMouseLeave = () => {
-      cursor.style.opacity = '0';
-      cursorDot.style.opacity = '0';
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseenter', handleMouseEnter);
-    document.addEventListener('mouseleave', handleMouseLeave);
-
-    const cursorTargets = document.querySelectorAll('.cursor-target');
-    cursorTargets.forEach(target => {
-      target.addEventListener('mouseenter', () => {
-        cursor.style.transform = 'scale(1.5)';
-        cursor.style.background = 'rgba(25, 118, 210, 0.2)';
-      });
-      target.addEventListener('mouseleave', () => {
-        cursor.style.transform = 'scale(1)';
-        cursor.style.background = 'rgba(25, 118, 210, 0.1)';
-      });
-    });
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseenter', handleMouseEnter);
-      document.removeEventListener('mouseleave', handleMouseLeave);
-      if (document.body.contains(cursor)) {
-        document.body.removeChild(cursor);
-      }
-      if (document.body.contains(cursorDot)) {
-        document.body.removeChild(cursorDot);
-      }
-    };
-  }, []);
-
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
