@@ -150,7 +150,7 @@ const Contact = () => {
                   />
 
                   <FormControl fullWidth required>
-                    <InputLabel>Subject hello</InputLabel>
+                    <InputLabel>Subject </InputLabel>
                     <Select
                       value={formData.subject}
                       label="Subject"
