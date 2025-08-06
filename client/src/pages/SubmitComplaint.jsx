@@ -7,6 +7,7 @@ import {
 import {
   AttachFile, Clear, PriorityHigh, CheckCircle, Schedule
 } from '@mui/icons-material';
+import axios from 'axios';
 
 const SubmitComplaint = () => {
   const [formData, setFormData] = useState({
@@ -21,6 +22,7 @@ const SubmitComplaint = () => {
   });
 
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [fileName, setFileName] = useState('');
 
   const categories = ['facility', 'request', 'hostel'];
@@ -108,21 +110,52 @@ const SubmitComplaint = () => {
     setFileName('');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const { email, department, category, subCategory, description } = formData;
+    setError('');
+    setSuccess('');
+
+    const { email, department, category, subCategory, subOther, description } = formData;
     if (!email || !department || !category || !subCategory || !description) {
       setError('Please fill all required fields');
       return;
     }
 
-    const finalData = {
-      ...formData,
-      extra_info: formData.subCategory === 'other' ? formData.subOther : formData.subCategory,
-    };
+    const formDataToSend = new FormData();
+    formDataToSend.append('email', email);
+    formDataToSend.append('department', department);
+    formDataToSend.append('category', category);
+    formDataToSend.append('subCategory', subCategory);
+    formDataToSend.append('subOther', formData.subOther); // Fixed: Use formData.subOther
+    formDataToSend.append('description', description);
+    formDataToSend.append('priority', formData.priority);
+    if (formData.file) {
+      formDataToSend.append('file', formData.file);
+    }
 
-    console.log('Submitted Data:', finalData);
-    alert(`✅ Complaint submitted with priority: ${formData.priority.toUpperCase()}`);
+    try {
+      const response = await axios.post('http://localhost:5000/api/submit_complaint', formDataToSend, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      setSuccess(response.data.message);
+      setFormData({
+        email: '',
+        department: '',
+        category: '',
+        subCategory: '',
+        subOther: '',
+        description: '',
+        priority: 'medium',
+        file: null,
+      });
+      setFileName('');
+      setTimeout(() => setSuccess(''), 5000);
+    } catch (error) {
+      setError(error.response?.data?.error || 'Failed to submit complaint. Please try again.');
+    }
   };
 
   return (
@@ -145,6 +178,7 @@ const SubmitComplaint = () => {
           </Typography>
 
           {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+          {success && <Alert severity="success" sx={{ mb: 3 }}>{success}</Alert>}
 
           <form onSubmit={handleSubmit}>
             <TextField
@@ -152,6 +186,7 @@ const SubmitComplaint = () => {
               label="Your Email Address"
               value={formData.email}
               onChange={(e) => handleChange('email', e.target.value)}
+              required
               sx={{ mb: 3 }}
             />
 
@@ -161,6 +196,7 @@ const SubmitComplaint = () => {
                 value={formData.department}
                 onChange={(e) => handleChange('department', e.target.value)}
                 label="Department"
+                required
               >
                 {departmentOptions.map(dep => (
                   <MenuItem key={dep} value={dep}>{dep}</MenuItem>
@@ -174,6 +210,7 @@ const SubmitComplaint = () => {
                 value={formData.category}
                 onChange={(e) => handleChange('category', e.target.value)}
                 label="Category"
+                required
               >
                 {categories.map(cat => (
                   <MenuItem key={cat} value={cat}>{cat}</MenuItem>
@@ -188,6 +225,7 @@ const SubmitComplaint = () => {
                   value={formData.subCategory}
                   onChange={(e) => handleChange('subCategory', e.target.value)}
                   label={`${formData.category} Type`}
+                  required
                 >
                   {subCategoryOptions[formData.category].map(opt => (
                     <MenuItem key={opt} value={opt}>{opt}</MenuItem>
@@ -241,7 +279,6 @@ const SubmitComplaint = () => {
               sx={{ mb: 3 }}
             />
 
-            {/* File Upload */}
             <Box sx={{ border: '2px dashed #ccc', borderRadius: 2, p: 2, mb: 3 }}>
               <input
                 type="file"

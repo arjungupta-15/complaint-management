@@ -23,6 +23,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import axios from 'axios';
 
 const Contact = () => {
   const navigate = useNavigate();
@@ -73,20 +74,15 @@ const Contact = () => {
     setError('');
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      const contactMessage = {
-        id: 'MSG' + Math.random().toString(36).substr(2, 9).toUpperCase(),
-        ...formData,
-        submittedAt: new Date().toISOString(),
+      const response = await axios.post('http://localhost:5000/api/submit_contact', {
+        name: formData.name,
+        email: formData.email,
+        subject: formData.subject,
+        message: formData.message,
         userId: user?.id || 'anonymous',
-      };
+      });
 
-      const existingMessages = JSON.parse(localStorage.getItem('contactMessages') || '[]');
-      existingMessages.push(contactMessage);
-      localStorage.setItem('contactMessages', JSON.stringify(existingMessages));
-
-      setSuccess('Thank you for your message! We\'ll get back to you within 24 hours.');
+      setSuccess(response.data.message);
       setFormData({
         name: user?.email?.split('@')[0] || '',
         email: user?.email || '',
@@ -97,9 +93,8 @@ const Contact = () => {
       setTimeout(() => {
         setSuccess('');
       }, 5000);
-
     } catch (error) {
-      setError('Failed to send message. Please try again.');
+      setError(error.response?.data?.error || 'Failed to send message. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -141,7 +136,6 @@ const Contact = () => {
                     value={formData.name}
                     onChange={(e) => handleInputChange('name', e.target.value)}
                     required
-                    className="cursor-target"
                   />
 
                   <TextField
@@ -152,7 +146,7 @@ const Contact = () => {
                     onChange={(e) => handleInputChange('email', e.target.value)}
                     required
                     disabled={isAuthenticated}
-                    className="cursor-target"
+                    
                   />
 
                   <FormControl fullWidth required>
@@ -161,7 +155,7 @@ const Contact = () => {
                       value={formData.subject}
                       label="Subject"
                       onChange={(e) => handleInputChange('subject', e.target.value)}
-                      className="cursor-target"
+                      
                     >
                       {subjectOptions.map((option) => (
                         <MenuItem key={option} value={option}>
@@ -180,7 +174,7 @@ const Contact = () => {
                     onChange={(e) => handleInputChange('message', e.target.value)}
                     required
                     placeholder="Please describe your inquiry or concern in detail..."
-                    className="cursor-target"
+                    
                   />
 
                   <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
@@ -191,7 +185,7 @@ const Contact = () => {
                       startIcon={<Send />}
                       disabled={loading}
                       sx={{ px: 4, py: 1.5 }}
-                      className="cursor-target"
+                      
                     >
                       {loading ? (
                         <CircularProgress size={24} color="inherit" />
@@ -203,7 +197,7 @@ const Contact = () => {
                       variant="outlined"
                       size="large"
                       onClick={() => navigate('/')}
-                      className="cursor-target"
+                      
                     >
                       Cancel
                     </Button>

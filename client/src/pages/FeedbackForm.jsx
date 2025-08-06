@@ -7,13 +7,53 @@ import {
   Container,
   Paper,
   Divider,
+  Alert,
 } from "@mui/material";
+import axios from "axios";
 
 const FeedbackForm = () => {
   const [rating, setRating] = useState(0);
+  const [formData, setFormData] = useState({
+    complaintId: "",
+    feedback: "",
+    resolution: "",
+  });
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const handleStarClick = (value) => {
     setRating(value);
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+
+    try {
+      const response = await axios.post(
+        "http://localhost:5000/api/submit_feedback",
+        {
+          complaintId: formData.complaintId,
+          feedback: formData.feedback,
+          resolution: formData.resolution,
+          rating,
+        }
+      );
+      setSuccess(response.data.message);
+      // Reset form
+      setFormData({ complaintId: "", feedback: "", resolution: "" });
+      setRating(0);
+    } catch (err) {
+      setError(
+        err.response?.data?.error || "Failed to submit feedback. Please try again."
+      );
+    }
   };
 
   return (
@@ -33,11 +73,24 @@ const FeedbackForm = () => {
           </Typography>
           <Divider sx={{ my: 2 }} />
 
-          <form method="POST" action="/submit_feedback.php">
+          {success && (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              {success}
+            </Alert>
+          )}
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
+
+          <form onSubmit={handleSubmit}>
             <TextField
               fullWidth
               label="Complaint ID"
-              name="complaint-id"
+              name="complaintId"
+              value={formData.complaintId}
+              onChange={handleInputChange}
               required
               margin="normal"
               variant="outlined"
@@ -47,6 +100,8 @@ const FeedbackForm = () => {
               fullWidth
               label="Feedback"
               name="feedback"
+              value={formData.feedback}
+              onChange={handleInputChange}
               multiline
               rows={4}
               required
@@ -58,6 +113,8 @@ const FeedbackForm = () => {
               fullWidth
               label="Resolution"
               name="resolution"
+              value={formData.resolution}
+              onChange={handleInputChange}
               multiline
               rows={4}
               required
