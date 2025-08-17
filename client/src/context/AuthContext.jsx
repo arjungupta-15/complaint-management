@@ -1,5 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+<<<<<<< HEAD
 import axios from 'axios'; // Added axios import
+=======
+import axios from 'axios'
+>>>>>>> 0d908ec6bccfb7c73b319a94466c77a6c5c82006
 
 const AuthContext = createContext();
 
@@ -14,13 +18,18 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
+<<<<<<< HEAD
   // Removed otpData state as OTP will be handled by backend
   // const [otpData, setOtpData] = useState(null);
+=======
+ //  const [otpData, setOtpData] = useState(null);
+>>>>>>> 0d908ec6bccfb7c73b319a94466c77a6c5c82006
 
   // Check if user is already logged in on app start
   useEffect(() => {
     const savedUser = localStorage.getItem('user');
     const savedAuth = localStorage.getItem('isAuthenticated');
+<<<<<<< HEAD
     const savedToken = localStorage.getItem('token'); // Retrieve token
     
     if (savedUser && savedAuth === 'true' && savedToken) {
@@ -32,6 +41,17 @@ export const AuthProvider = ({ children }) => {
       axios.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`;
     } else {
       // Ensure we are not authenticated if no valid session found
+=======
+    const savedToken = localStorage.getItem('token');
+    
+    if (savedUser && savedAuth === 'true' && savedToken) {
+      const parsedUser = JSON.parse(savedUser);
+      setUser({ ...parsedUser , token: savedToken });
+      setIsAuthenticated(true);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`;
+    } else {
+      
+>>>>>>> 0d908ec6bccfb7c73b319a94466c77a6c5c82006
       setUser(null);
       setIsAuthenticated(false);
       localStorage.removeItem('user');
@@ -53,7 +73,10 @@ export const AuthProvider = ({ children }) => {
       return null;
     }
   };
+<<<<<<< HEAD
 
+=======
+>>>>>>> 0d908ec6bccfb7c73b319a94466c77a6c5c82006
   // Generate OTP - now triggers backend to send OTP
   const generateOTP = async (email) => {
     try {
@@ -67,7 +90,11 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+<<<<<<< HEAD
   // Verify OTP - now calls backend for verification
+=======
+   // Verify OTP - now calls backend for verification
+>>>>>>> 0d908ec6bccfb7c73b319a94466c77a6c5c82006
   const verifyOTP = async (email, otp) => {
     try {
       const response = await axios.post('http://localhost:5000/api/auth/student/verify-otp', { email, otp });
@@ -98,6 +125,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+<<<<<<< HEAD
   // Admin login function (already updated)
   const loginAdmin = async ({ email, password }) => {
     try {
@@ -106,6 +134,18 @@ export const AuthProvider = ({ children }) => {
         password,
       });
 
+=======
+
+  // Admin login function
+// Admin login function (already updated)
+  const loginAdmin = async ({ email, password }) => {
+    try {
+      const response = await axios.post('http://localhost:5000/api/auth/admin/login', {
+        email,
+        password,
+      });
+
+>>>>>>> 0d908ec6bccfb7c73b319a94466c77a6c5c82006
       const { token } = response.data;
       const userInfo = {
         email,
@@ -127,6 +167,7 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Admin login failed:', error.response?.data?.error || error.message);
       throw new Error(error.response?.data?.error || 'Invalid admin credentials');
+<<<<<<< HEAD
     }
   };
 
@@ -163,6 +204,46 @@ export const AuthProvider = ({ children }) => {
       throw new Error(error.response?.data?.error || 'Failed to create admin account.');
     }
   };
+=======
+    }
+  };
+  
+   // Student signup function
+  const signupStudent = async ({ name, email, password }) => {
+    try {
+      const response = await axios.post('http://localhost:5000/api/auth/student/signup', {
+        name,
+        email,
+        password,
+      });
+      // Assuming signup automatically logs in or returns a token to log in
+      // For now, after successful signup, we can navigate to login page or auto-login
+      // If auto-login, you'd get token and set user/isAuthenticated here
+      console.log('Student signup response:', response.data);
+      return true; // Indicate success
+    } catch (error) {
+      console.error('Student signup failed:', error.response?.data?.error || error.message);
+      throw new Error(error.response?.data?.error || 'Failed to create account.');
+    }
+  };
+  
+    // Admin signup function (new)
+  const signupAdmin = async ({ email, password }) => {
+    try {
+      const response = await axios.post('http://localhost:5000/api/auth/admin/signup', {
+        email,
+        password,
+      });
+      console.log('Admin signup response:', response.data);
+      return true; // Indicate success
+    } catch (error) {
+      console.error('Admin signup failed:', error.response?.data?.error || error.message);
+      throw new Error(error.response?.data?.error || 'Failed to create admin account.');
+    }
+  };
+
+    
+>>>>>>> 0d908ec6bccfb7c73b319a94466c77a6c5c82006
 
   // Student login function (triggers OTP generation on backend)
   const loginStudent = async ({ email, password }) => {
@@ -176,7 +257,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Logout function
+ // Logout function
   const logout = () => {
     setUser(null);
     setIsAuthenticated(false);
@@ -188,7 +269,8 @@ export const AuthProvider = ({ children }) => {
     delete axios.defaults.headers.common['Authorization']; // Clear auth header
   };
 
-  const value = {
+
+ const value = {
     isAuthenticated,
     user,
     generateOTP,
