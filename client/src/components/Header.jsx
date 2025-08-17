@@ -42,7 +42,7 @@ const Header = () => {
 
   const navigationItems = [
     { label: 'Home', path: '/', requiresAuth: false },
-    { label: 'Feedbackk', path: '/feedback', requiresAuth: true },
+    { label: 'Feedback', path: '/feedback', requiresAuth: true },
     { label: 'FAQs', path: '/faqs', requiresAuth: false },
     { label: 'Contact', path: '/contact', requiresAuth: false },
     { label: 'Dashboard', path: '/dashboard', requiresAuth: true, adminOnly: true },
