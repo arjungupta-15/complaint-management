@@ -85,8 +85,10 @@ const Home = () => {
         backgroundSize: 'cover',
         backgroundRepeat: 'no-repeat',
         backgroundPosition: 'center',
-        minHeight: '100vh',
+        minHeight: '100vh', // Initial full height
+        height: 'auto', // Allows content to expand
         width: '100%',
+        overflow: 'auto', // Enables scrolling
       }}
     >
       {/* Overlay */}
@@ -96,14 +98,15 @@ const Home = () => {
           top: 0,
           left: 0,
           width: '100%',
-          height: '100%',
+          height: 'auto', // Matches content height
+          minHeight: '100vh', // Ensures full viewport coverage initially
           backgroundColor: 'rgba(0, 0, 0, 0.5)',
           zIndex: 0,
         }}
       />
 
       {/* Main Content */}
-      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1, py: 6 }}>
+      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1, py: 6, height: 'auto' }}>
         {/* Hero Section */}
         <Fade in timeout={1000}>
           <Box sx={{ textAlign: 'center', mb: 6 }}>

@@ -101,7 +101,7 @@ const Contact = () => {
   };
 
   return (
-    <Container maxWidth="sm" sx={{ mt: 4 }}>
+    <Container maxWidth="sm" sx={{ mt: 4, mb: 4, minHeight: '100vh', py: 4 }}>
       <Fade in timeout={800}>
         <Paper elevation={8} sx={{ p: 4, borderRadius: 3 }}>
           <Box sx={{ textAlign: 'center', mb: 4 }}>

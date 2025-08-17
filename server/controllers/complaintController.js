@@ -45,13 +45,15 @@ exports.submitComplaint = (req, res) => {
         return res.status(400).json({ error: 'Please enter a valid email address' });
       }
 
-      if (!['facility', 'request', 'hostel'].includes(category)) {
-        return res.status(400).json({ error: 'Invalid category' });
-      }
+      // Removed hardcoded category validation as categories are now dynamic
+      // if (!['facility', 'request', 'hostel'].includes(category)) {
+      //   return res.status(400).json({ error: 'Invalid category' });
+      // }
 
-      if (!['urgent', 'high', 'medium', 'low'].includes(priority)) {
-        return res.status(400).json({ error: 'Invalid priority' });
-      }
+      // Removed hardcoded priority validation as priority is now dynamically set client-side
+      // if (!['urgent', 'high', 'medium', 'low'].includes(priority)) {
+      //   return res.status(400).json({ error: 'Invalid priority' });
+      // }
 
       // Create new complaint document
       const newComplaint = new Complaint({
@@ -76,4 +78,56 @@ exports.submitComplaint = (req, res) => {
       res.status(500).json({ error: 'Failed to submit complaint. Please try again.' });
     }
   });
+};
+
+// Get a complaint by ID
+exports.getComplaintById = async (req, res) => {
+  try {
+    const complaint = await Complaint.findById(req.params.id);
+    if (!complaint) {
+      return res.status(404).json({ message: 'Complaint not found' });
+    }
+    res.status(200).json(complaint);
+  } catch (err) {
+    console.error('Error fetching complaint by ID:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Get all complaints
+exports.getAllComplaints = async (req, res) => {
+  try {
+    const complaints = await Complaint.find({});
+    res.status(200).json(complaints);
+  } catch (err) {
+    console.error('Error fetching all complaints:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Update complaint status
+exports.updateComplaintStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!status) {
+      return res.status(400).json({ message: 'Status is required' });
+    }
+
+    const updatedComplaint = await Complaint.findByIdAndUpdate(
+      id,
+      { status, updatedAt: new Date() },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedComplaint) {
+      return res.status(404).json({ message: 'Complaint not found' });
+    }
+
+    res.status(200).json(updatedComplaint);
+  } catch (err) {
+    console.error('Error updating complaint status:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
 };

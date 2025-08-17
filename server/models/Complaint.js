@@ -16,7 +16,6 @@ const complaintSchema = new mongoose.Schema({
     type: String,
     required: true,
     trim: true,
-    enum: ['facility', 'request', 'hostel'],
   },
   subCategory: {
     type: String,
@@ -37,7 +36,6 @@ const complaintSchema = new mongoose.Schema({
     type: String,
     required: true,
     trim: true,
-    enum: ['urgent', 'high', 'medium', 'low'],
   },
   filePath: {
     type: String,
