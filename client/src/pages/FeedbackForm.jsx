@@ -57,7 +57,7 @@ const FeedbackForm = () => {
   };
 
   return (
-    <Box sx={{ backgroundColor: "#f9fafc", minHeight: "100vh", py: 5 }}>
+    <Box sx={{ backgroundColor: "#f9fafc", minHeight: "100vh", py: 5, overflow: 'auto' }}>
       <Container maxWidth="sm">
         <Paper
           elevation={6}

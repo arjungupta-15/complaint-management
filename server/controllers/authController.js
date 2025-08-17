@@ -30,7 +30,7 @@ exports.loginStudent = async (req, res) => {
     if (!isMatch) return res.status(401).json({ error: 'Invalid password' });
 
     const otp = generateOTP(email);
-    console.log('OTP for student:', otp); // You should send via email in production
+    console.log(`OTP for student ${email}: ${otp} (simulated email)`); // Simulate email sending
     res.json({ message: 'OTP sent' });
   } catch (err) {
     res.status(500).json({ error: 'Login failed' });
@@ -48,6 +48,19 @@ exports.verifyStudentOTP = async (req, res) => {
     res.json({ token });
   } catch (err) {
     res.status(500).json({ error: 'OTP verification failed' });
+  }
+};
+
+exports.signupAdmin = async (req, res) => {
+  const { email, password } = req.body;
+  try {
+    const exists = await Admin.findOne({ email });
+    if (exists) return res.status(400).json({ error: 'Email already in use' });
+
+    const admin = await Admin.create({ email, password });
+    res.status(201).json({ message: 'Admin created successfully' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to signup admin' });
   }
 };
 

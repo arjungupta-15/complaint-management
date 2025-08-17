@@ -27,35 +27,9 @@ import {
   AccessTime,
   CheckCircle,
   HourglassEmpty,
+  PriorityHigh,
 } from "@mui/icons-material";
-
-// Mock complaints
-const mockComplaints = [
-  {
-    id: "ABC123",
-    department: "Sanitation",
-    email: "user@example.com",
-    status: "in progress",
-    description: "Overflowing garbage bin near Block C.",
-    location: "Block C, Greenfield Society",
-    priority: "high",
-    createdAt: "2024-07-28",
-    updatedAt: "2024-07-30",
-    resolvedAt: null,
-  },
-  {
-    id: "XYZ789",
-    department: "Water Supply",
-    email: "resident2@example.com",
-    status: "resolved",
-    description: "Low water pressure since 3 days.",
-    location: "Sector 12, Townview",
-    priority: "medium",
-    createdAt: "2024-07-25",
-    updatedAt: "2024-07-28",
-    resolvedAt: "2024-07-29",
-  },
-];
+import axios from 'axios'; // Import axios
 
 // Utility functions
 const getStatusColor = (status) => {
@@ -64,6 +38,12 @@ const getStatusColor = (status) => {
       return "success";
     case "in progress":
       return "warning";
+    case "pending":
+      return "info";
+    case "reopened":
+      return "error";
+    case "escalated":
+      return "error";
     default:
       return "default";
   }
@@ -71,10 +51,13 @@ const getStatusColor = (status) => {
 
 const getPriorityColor = (priority) => {
   switch (priority) {
+    case "urgent":
     case "high":
       return "error";
     case "medium":
       return "warning";
+    case "low":
+      return "success";
     default:
       return "default";
   }
@@ -82,10 +65,13 @@ const getPriorityColor = (priority) => {
 
 const getPriorityIcon = (priority) => {
   switch (priority) {
+    case "urgent":
     case "high":
-      return <CheckCircle />;
+      return <PriorityHigh />;
     case "medium":
       return <HourglassEmpty />;
+    case "low":
+      return <CheckCircle />;
     default:
       return <AccessTime />;
   }
@@ -96,7 +82,7 @@ const getTimelineEvents = (complaint) => {
     {
       title: "Complaint Registered",
       description: complaint.description,
-      time: complaint.createdAt,
+      time: new Date(complaint.submittedAt).toLocaleString(),
       icon: <CheckCircle />,
       color: "primary",
     },
@@ -106,25 +92,28 @@ const getTimelineEvents = (complaint) => {
     events.push({
       title: "In Progress",
       description: "Your complaint is currently being addressed.",
-      time: complaint.updatedAt,
+      time: complaint.updatedAt ? new Date(complaint.updatedAt).toLocaleString() : 'N/A',
       icon: <HourglassEmpty />,
       color: "warning",
     });
   }
 
   if (complaint.status === "resolved") {
-    events.push(
-      {
+    // Add in-progress event if updated date is available and different from submitted
+    if (complaint.updatedAt && complaint.updatedAt !== complaint.submittedAt) {
+      events.push({
         title: "In Progress",
         description: "Your complaint was being worked on.",
-        time: complaint.updatedAt,
+        time: new Date(complaint.updatedAt).toLocaleString(),
         icon: <HourglassEmpty />,
         color: "warning",
-      },
+      });
+    }
+    events.push(
       {
         title: "Resolved",
         description: "Issue resolved successfully.",
-        time: complaint.resolvedAt,
+        time: complaint.resolvedAt ? new Date(complaint.resolvedAt).toLocaleString() : 'N/A',
         icon: <CheckCircle />,
         color: "success",
       }
@@ -138,25 +127,35 @@ const TrackComplaint = () => {
   const [trackingId, setTrackingId] = useState("");
   const [complaint, setComplaint] = useState(null);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
-  const handleTrack = () => {
-    const result = mockComplaints.find(
-      (c) => c.id === trackingId.trim().toUpperCase()
-    );
+  const handleTrack = async () => {
+    setError("");
+    setComplaint(null);
+    setLoading(true);
 
-    if (result) {
-      setComplaint(result);
-      setError("");
-    } else {
-      setComplaint(null);
-      setError("Complaint not found. Please check the Tracking ID.");
+    if (!trackingId) {
+      setError("Please enter a Tracking ID.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // Assuming the tracking ID is the MongoDB _id
+      const response = await axios.get(`http://localhost:5000/api/complaints/${trackingId.trim()}`);
+      setComplaint(response.data);
+    } catch (err) {
+      console.error("Error tracking complaint:", err);
+      setError(err.response?.data?.message || "Complaint not found. Please check the Tracking ID.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <Box sx={{ maxWidth: 900, mx: "auto", p: 3 }}>
+    <Box sx={{ maxWidth: 900, mx: "auto", p: 3, minHeight: '100vh', py: 4 }}>
       <Typography
         variant="h4"
         fontWeight="bold"
@@ -194,8 +193,9 @@ const TrackComplaint = () => {
       onClick={handleTrack}
       size="large"
       sx={{ px: 4 }}
+      disabled={loading}
     >
-      Track
+      {loading ? 'Tracking...' : 'Track'}
     </Button>
   </Stack>
 
@@ -217,7 +217,7 @@ const TrackComplaint = () => {
           <Stack spacing={2}>
             <Box>
               <Typography variant="subtitle2">Tracking ID</Typography>
-              <Typography variant="body1">{complaint.id}</Typography>
+              <Typography variant="body1">{complaint._id}</Typography>
             </Box>
 
             <Box>
@@ -237,9 +237,21 @@ const TrackComplaint = () => {
             </Box>
 
             <Box>
-              <Typography variant="subtitle2">Location</Typography>
-              <Typography variant="body1">{complaint.location}</Typography>
+              <Typography variant="subtitle2">Category</Typography>
+              <Typography variant="body1">{complaint.category}</Typography>
             </Box>
+
+            <Box>
+              <Typography variant="subtitle2">Sub-Category</Typography>
+              <Typography variant="body1">{complaint.subCategory}</Typography>
+            </Box>
+
+            {complaint.subOther && (
+              <Box>
+                <Typography variant="subtitle2">Other Details</Typography>
+                <Typography variant="body1">{complaint.subOther}</Typography>
+              </Box>
+            )}
 
             <Box>
               <Typography variant="subtitle2">Description</Typography>

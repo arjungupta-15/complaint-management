@@ -28,8 +28,6 @@ import {
   Alert,
   CircularProgress,
   Fade,
-  AppBar,
-  Toolbar,
 } from '@mui/material';
 import { Link } from 'react-router-dom';
 import {
@@ -48,6 +46,8 @@ import {
   Pending,
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
+import axios from 'axios'; // Import axios
+import AdminLayout from '../components/AdminLayout';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -67,77 +67,12 @@ const Dashboard = () => {
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
   const [newStatus, setNewStatus] = useState('');
   const [updateLoading, setUpdateLoading] = useState(false);
+  const [alertMessage, setAlertMessage] = useState({ type: '', message: '' });
 
-  // Mock complaint data
-  const mockComplaints = [
-    {
-      id: 'COMP001',
-      title: 'Broken Chair in Computer Lab',
-      description: 'Chair number 15 in computer lab 2 is broken and needs immediate replacement.',
-      category: 'Infrastructure',
-      department: 'Computer Science',
-      priority: 'high',
-      status: 'pending',
-      submittedBy: 'student@college.com',
-      submittedAt: '2024-01-15T10:30:00Z',
-      updatedAt: '2024-01-15T10:30:00Z',
-      attachments: ['chair_photo.jpg']
-    },
-    {
-      id: 'COMP002',
-      title: 'Air Conditioning Not Working',
-      description: 'AC in room 301 is not cooling properly. Temperature is too high.',
-      category: 'Infrastructure',
-      department: 'Mechanical Engineering',
-      priority: 'medium',
-      status: 'in_progress',
-      submittedBy: 'student@college.com',
-      submittedAt: '2024-01-14T14:20:00Z',
-      updatedAt: '2024-01-16T09:15:00Z',
-      attachments: []
-    },
-    {
-      id: 'COMP003',
-      title: 'WiFi Connection Issues',
-      description: 'WiFi signal is very weak in the library area. Need better coverage.',
-      category: 'IT Services',
-      department: 'Information Technology',
-      priority: 'high',
-      status: 'resolved',
-      submittedBy: 'student@college.com',
-      submittedAt: '2024-01-13T11:45:00Z',
-      updatedAt: '2024-01-17T16:30:00Z',
-      attachments: ['wifi_signal.jpg']
-    },
-    {
-      id: 'COMP004',
-      title: 'Water Leak in Chemistry Lab',
-      description: 'There is a water leak from the ceiling in chemistry lab 1.',
-      category: 'Infrastructure',
-      department: 'Chemistry',
-      priority: 'high',
-      status: 'pending',
-      submittedBy: 'student@college.com',
-      submittedAt: '2024-01-12T08:15:00Z',
-      updatedAt: '2024-01-12T08:15:00Z',
-      attachments: ['leak_photo.jpg']
-    },
-    {
-      id: 'COMP005',
-      title: 'Projector Not Working',
-      description: 'Projector in room 205 is not displaying properly. Screen is blurry.',
-      category: 'IT Services',
-      department: 'Electrical Engineering',
-      priority: 'medium',
-      status: 'in_progress',
-      submittedBy: 'student@college.com',
-      submittedAt: '2024-01-11T13:20:00Z',
-      updatedAt: '2024-01-15T10:45:00Z',
-      attachments: []
-    }
-  ];
+  // Removed Mock complaint data
+  // const mockComplaints = [...];
 
-  // Mock notification data
+  // Mock notification data (will update later if needed)
   const mockNotifications = [
     {
       complaint_id: 'COMP001',
@@ -159,25 +94,30 @@ const Dashboard = () => {
     },
   ];
 
-  // Fetch dashboard data
-  const fetchDashboardData = async () => {
+  // Fetch all complaints
+  const fetchComplaints = async () => {
+    setLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      const stats = {
-        total: complaints.length,
-        resolved: complaints.filter(c => c.status === 'resolved').length,
-        pending: complaints.filter(c => c.status === 'pending').length,
-      };
-      setDashboardData(stats);
+      const response = await axios.get('http://localhost:5000/api/complaints');
+      setComplaints(response.data);
+      // Update dashboard stats based on fetched complaints
+      const total = response.data.length;
+      const resolved = response.data.filter(c => c.status === 'resolved').length;
+      const pending = response.data.filter(c => c.status === 'pending').length;
+      const inProgress = response.data.filter(c => c.status === 'in_progress').length;
+      setDashboardData({ total, resolved, pending, inProgress });
     } catch (error) {
-      console.error('Failed to fetch dashboard data:', error);
+      console.error('Failed to fetch complaints:', error);
+      setAlertMessage({ type: 'error', message: 'Failed to load complaints.' });
+    } finally {
+      setLoading(false);
     }
   };
 
   // Fetch notifications
   const fetchNotifications = async () => {
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // For now, using mock notifications. Integrate with backend later if notifications API is available.
       setNotifications(mockNotifications);
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
@@ -185,22 +125,13 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    const savedComplaints = localStorage.getItem('complaints');
-    if (savedComplaints) {
-      setComplaints(JSON.parse(savedComplaints));
-    } else {
-      setComplaints(mockComplaints);
-      localStorage.setItem('complaints', JSON.stringify(mockComplaints));
-    }
-
-    fetchDashboardData();
+    fetchComplaints();
     fetchNotifications();
-    setLoading(false);
 
     const interval = setInterval(() => {
-      fetchDashboardData();
+      fetchComplaints();
       fetchNotifications();
-    }, 30000);
+    }, 30000); // Refresh every 30 seconds
 
     return () => clearInterval(interval);
   }, []);
@@ -209,14 +140,13 @@ const Dashboard = () => {
     let filtered = complaints;
 
     if (user?.role === 'student') {
-      filtered = filtered.filter(complaint => complaint.submittedBy === user.email);
+      filtered = filtered.filter(complaint => complaint.email === user.email);
     }
 
     if (searchTerm) {
       filtered = filtered.filter(complaint =>
-        complaint.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         complaint.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        complaint.id.toLowerCase().includes(searchTerm.toLowerCase())
+        complaint._id.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -243,6 +173,7 @@ const Dashboard = () => {
 
   const getPriorityColor = (priority) => {
     switch (priority) {
+      case 'urgent': return 'error';
       case 'high': return 'error';
       case 'medium': return 'warning';
       case 'low': return 'success';
@@ -252,6 +183,7 @@ const Dashboard = () => {
 
   const getPriorityIcon = (priority) => {
     switch (priority) {
+      case 'urgent': return <BugReport />;
       case 'high': return <Error />;
       case 'medium': return <Schedule />;
       case 'low': return <CheckCircle />;
@@ -272,29 +204,33 @@ const Dashboard = () => {
     if (!newStatus) return;
 
     setUpdateLoading(true);
+    setAlertMessage({ type: '', message: '' });
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      const updatedComplaints = complaints.map(complaint =>
-        complaint.id === selectedComplaint.id
-          ? { ...complaint, status: newStatus, updatedAt: new Date().toISOString() }
-          : complaint
+      const response = await axios.put(`http://localhost:5000/api/complaints/${selectedComplaint._id}/status`, {
+        status: newStatus,
+      });
+      
+      setComplaints(prevComplaints =>
+        prevComplaints.map(complaint =>
+          complaint._id === response.data._id ? response.data : complaint
+        )
       );
-
-      setComplaints(updatedComplaints);
-      localStorage.setItem('complaints', JSON.stringify(updatedComplaints));
+      setAlertMessage({ type: 'success', message: 'Complaint status updated successfully!' });
       setUpdateDialogOpen(false);
       setSelectedComplaint(null);
       setNewStatus('');
     } catch (error) {
       console.error('Failed to update status:', error);
+      setAlertMessage({ type: 'error', message: error.response?.data?.message || 'Failed to update status.' });
     } finally {
       setUpdateLoading(false);
+      setTimeout(() => setAlertMessage({ type: '', message: '' }), 5000);
     }
   };
 
   const getStatistics = () => {
     const userComplaints = user?.role === 'student' 
-      ? complaints.filter(c => c.submittedBy === user.email)
+      ? complaints.filter(c => c.email === user.email) // Filter by user email
       : complaints;
 
     return {
@@ -323,8 +259,8 @@ const Dashboard = () => {
   }
 
   return (
-    <Box sx={{ flexGrow: 1 }}>
-      <Container maxWidth="xl" sx={{ mt: 4 }}>
+    <AdminLayout>
+      <Box sx={{ flexGrow: 1 }}>
         <Fade in timeout={800}>
           <Box>
             {/* Header */}
@@ -343,6 +279,12 @@ const Dashboard = () => {
                 </Typography>
               </Box>
             </Box>
+
+            {alertMessage.message && (
+              <Alert severity={alertMessage.type} sx={{ mb: 3 }}>
+                {alertMessage.message}
+              </Alert>
+            )}
 
             {/* Statistics Cards */}
             <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -369,10 +311,10 @@ const Dashboard = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <Box>
                         <Typography variant="h4" component="div">
-                          {dashboardData.total}
+                          {dashboardData.inProgress} {/* Changed to inProgress */}
                         </Typography>
                         <Typography variant="body2">
-                          InProgess
+                          In Progress
                         </Typography>
                       </Box>
                       <Assignment sx={{ fontSize: 40, opacity: 0.8 }} />
@@ -416,25 +358,7 @@ const Dashboard = () => {
               </Grid>
             </Grid>
 
-            {/* Complaints Filter Section */}
-            <Card sx={{ mb: 3 }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom sx={{ ml: 5 }}>
-                  View Complaints
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 2, ml: 5 }}>
-                  <Button variant="contained" component={Link} to="/all-complaints">
-                    All Complaints
-                  </Button>
-                  <Button variant="contained" component = {Link} to="/resolved-complaints">
-                    Resolved Complaints
-                  </Button>
-                  <Button variant="contained" component={Link} to="/pending-complaints">
-                    Pending Complaints
-                  </Button>
-                </Box>
-              </CardContent>
-            </Card>
+            
 
             {/* Filters */}
             <Card sx={{ mb: 3 }}>
@@ -481,6 +405,7 @@ const Dashboard = () => {
                         className="cursor-target"
                       >
                         <MenuItem value="all">All Priorities</MenuItem>
+                        <MenuItem value="urgent">Urgent</MenuItem>
                         <MenuItem value="high">High</MenuItem>
                         <MenuItem value="medium">Medium</MenuItem>
                         <MenuItem value="low">Low</MenuItem>
@@ -516,143 +441,168 @@ const Dashboard = () => {
                     <TableHead>
                       <TableRow>
                         <TableCell>ID</TableCell>
-                        <TableCell>Title</TableCell>
-                        <TableCell>Category</TableCell>
+                        <TableCell>Category</TableCell> {/* Removed Title column */}
+                        <TableCell>Department</TableCell>
                         <TableCell>Priority</TableCell>
                         <TableCell>Status</TableCell>
-                        <TableCell>Submitted</TableCell>
+                        <TableCell>Submitted By</TableCell> {/* Changed to Submitted By */}
+                        <TableCell>Submitted At</TableCell> {/* Changed to Submitted At */}
                         {user?.role === 'admin' && <TableCell>Actions</TableCell>}
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {filteredComplaints.map((complaint) => (
-                        <TableRow key={complaint.id} hover>
-                          <TableCell>
-                            <Typography variant="body2" fontWeight="bold">
-                              {complaint.id}
-                            </Typography>
+                      {filteredComplaints.length === 0 && !loading ? (
+                        <TableRow>
+                          <TableCell colSpan={user?.role === 'admin' ? 8 : 7} align="center">
+                            No complaints found.
                           </TableCell>
-                          <TableCell>
-                            <Typography variant="body2" fontWeight="medium">
-                              {complaint.title}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {complaint.description.substring(0, 50)}...
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Chip label={complaint.category} size="small" />
-                          </TableCell>
-                          <TableCell>
-                            <Chip
-                              icon={getPriorityIcon(complaint.priority)}
-                              label={complaint.priority.toUpperCase()}
-                              color={getPriorityColor(complaint.priority)}
-                              size="small"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Chip
-                              label={complaint.status.replace('_', ' ').toUpperCase()}
-                              color={getStatusColor(complaint.status)}
-                              size="small"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2">
-                              {new Date(complaint.submittedAt).toLocaleDateString()}
-                            </Typography>
-                          </TableCell>
-                          {user?.role === 'admin' && (
-                            <TableCell>
-                              <IconButton
-                                size="small"
-                                onClick={() => {
-                                  setSelectedComplaint(complaint);
-                                  setNewStatus(complaint.status);
-                                  setUpdateDialogOpen(true);
-                                }}
-                                className="cursor-target"
-                              >
-                                <Edit />
-                              </IconButton>
-                            </TableCell>
-                          )}
                         </TableRow>
-                      ))}
+                      ) : (
+                        filteredComplaints.map((complaint) => (
+                          <TableRow key={complaint._id} hover>
+                            <TableCell>
+                              <Typography variant="body2" fontWeight="bold">
+                                {complaint._id}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Chip label={complaint.category} size="small" />
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" fontWeight="medium">
+                                {complaint.department}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Chip
+                                icon={getPriorityIcon(complaint.priority || 'medium')}
+                                label={(complaint.priority || 'medium').toUpperCase()}
+                                color={getPriorityColor(complaint.priority || 'medium')}
+                                size="small"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Chip
+                                label={complaint.status ? complaint.status.replace('_', ' ').toUpperCase() : 'PENDING'}
+                                color={getStatusColor(complaint.status || 'pending')}
+                                size="small"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2">
+                                {complaint.email || 'N/A'}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2">
+                                {complaint.submittedAt ? new Date(complaint.submittedAt).toLocaleDateString() : 'N/A'}
+                              </Typography>
+                            </TableCell>
+                            {user?.role === 'admin' && (
+                              <TableCell>
+                                <IconButton
+                                  size="small"
+                                  onClick={() => {
+                                    setSelectedComplaint(complaint);
+                                    setNewStatus(complaint.status);
+                                    setUpdateDialogOpen(true);
+                                  }}
+                                  className="cursor-target"
+                                >
+                                  <Edit />
+                                </IconButton>
+                              </TableCell>
+                            )}
+                          </TableRow>
+                        ))
+                      )}
                     </TableBody>
                   </Table>
                 </TableContainer>
               </CardContent>
             </Card>
 
-            {/* Notifications Section */}
-            <Card sx={{ mt: 3, borderRadius: 2, boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom sx={{ ml: 2, fontWeight: 'bold', color: 'text.primary' }}>
-                  Recent Complaints
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 2, ml: 2, mb: 3 }}>
-                  <Button variant="contained" component={Link} to="/reopen-complaints" sx={{ borderRadius: 20, textTransform: 'none' }}>
-                    View Reopened Complaints
-                  </Button>
-                  <Button variant="contained" component={Link} to="/escalated-complaints" sx={{ borderRadius: 20, textTransform: 'none' }}>
-                    View Escalated Complaints
-                  </Button>
-                </Box>
-                <Box sx={{ ml: 2, mr: 2 }}>
-                  {notifications.length > 0 ? (
-                    notifications.map((notification, index) => (
-                      <Card
-                        key={index}
-                        sx={{
-                          mb: 2,
-                          p: 2,
-                          borderRadius: 2,
-                          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                          transition: 'transform 0.2s, box-shadow 0.2s',
-                          '&:hover': {
-                            transform: 'translateY(-2px)',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                          },
-                        }}
-                      >
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                          <Chip
-                            label={notification.action.toUpperCase()}
-                            color={getActionColor(notification.action)}
-                            size="small"
-                            sx={{ fontWeight: 'medium' }}
-                          />
-                          <Box>
-                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                              Tracking ID: {notification.complaint_id}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              <strong>Email:</strong> {notification.email}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              <strong>Message:</strong> {notification.message}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </Card>
-                    ))
-                  ) : (
-                    <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
-                      No notifications found.
-                    </Typography>
-                  )}
-                </Box>
-              </CardContent>
-            </Card>
+                         {/* Quick Actions Section */}
+             <Card sx={{ mt: 3, borderRadius: 2, boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+               <CardContent>
+                 <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', color: 'text.primary', mb: 3 }}>
+                   Quick Actions
+                 </Typography>
+                 <Grid container spacing={2}>
+                   <Grid item xs={12} sm={6} md={3}>
+                     <Button 
+                       variant="contained" 
+                       component={Link} 
+                       to="/all-complaints" 
+                       fullWidth
+                       sx={{ 
+                         borderRadius: 2, 
+                         textTransform: 'none',
+                         py: 2,
+                         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                       }}
+                     >
+                       View All Complaints
+                     </Button>
+                   </Grid>
+                   <Grid item xs={12} sm={6} md={3}>
+                     <Button 
+                       variant="contained" 
+                       component={Link} 
+                       to="/pending-complaints" 
+                       fullWidth
+                       sx={{ 
+                         borderRadius: 2, 
+                         textTransform: 'none',
+                         py: 2,
+                         background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+                       }}
+                     >
+                       Pending Complaints
+                     </Button>
+                   </Grid>
+                   <Grid item xs={12} sm={6} md={3}>
+                     <Button 
+                       variant="contained" 
+                       component={Link} 
+                       to="/resolved-complaints" 
+                       fullWidth
+                       sx={{ 
+                         borderRadius: 2, 
+                         textTransform: 'none',
+                         py: 2,
+                         background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
+                       }}
+                     >
+                       Resolved Complaints
+                     </Button>
+                   </Grid>
+                   <Grid item xs={12} sm={6} md={3}>
+                     <Button 
+                       variant="contained" 
+                       component={Link} 
+                       to="/manage-options" 
+                       fullWidth
+                       sx={{ 
+                         borderRadius: 2, 
+                         textTransform: 'none',
+                         py: 2,
+                         background: 'linear-gradient(135deg, #0d47a1 0%, #764ba2 100%)'
+                       }}
+                     >
+                       Manage Options
+                     </Button>
+                   </Grid>
+                 </Grid>
+               </CardContent>
+             </Card>
 
             {/* Update Status Dialog */}
             <Dialog open={updateDialogOpen} onClose={() => setUpdateDialogOpen(false)}>
               <DialogTitle>Update Complaint Status</DialogTitle>
               <DialogContent>
                 <Typography variant="body2" sx={{ mb: 2 }}>
-                  Complaint: {selectedComplaint?.title}
+                  Complaint: {selectedComplaint?.description}
                 </Typography>
                 <FormControl fullWidth>
                   <InputLabel>New Status</InputLabel>
@@ -666,6 +616,8 @@ const Dashboard = () => {
                     <MenuItem value="in_progress">In Progress</MenuItem>
                     <MenuItem value="resolved">Resolved</MenuItem>
                     <MenuItem value="closed">Closed</MenuItem>
+                    <MenuItem value="reopened">Reopened</MenuItem> {/* Added Reopened */}
+                    <MenuItem value="escalated">Escalated</MenuItem> {/* Added Escalated */}
                   </Select>
                 </FormControl>
               </DialogContent>
@@ -683,8 +635,8 @@ const Dashboard = () => {
             </Dialog>
           </Box>
         </Fade>
-      </Container>
-    </Box>
+      </Box>
+    </AdminLayout>
   );
 };
 

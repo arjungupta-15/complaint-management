@@ -40,7 +40,7 @@ import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
   const navigate = useNavigate();
-  const { generateOTP, verifyOTP, isAuthenticated, loginAdmin, signupStudent, loginStudent } = useAuth();
+  const { generateOTP, verifyOTP, isAuthenticated, loginAdmin, signupStudent, loginStudent, signupAdmin } = useAuth();
   
   const [mode, setMode] = useState(0); // 0: Login, 1: Signup
   const [step, setStep] = useState(1); // 1: role selection, 2: form, 3: OTP (for student login)
@@ -99,12 +99,12 @@ const Login = () => {
     setError('');
 
     try {
-      // First validate student credentials
+      // First validate student credentials and request OTP from backend
+      // The loginStudent function in AuthContext now handles both validation and OTP generation on backend
       await loginStudent({ email, password });
       
-      // If credentials are valid, generate OTP
-      const generatedOtp = generateOTP();
-      console.log('Generated OTP for student login:', generatedOtp);
+      // const generatedOtp = generateOTP(); // Removed: OTP generation is now handled by backend in loginStudent
+      // console.log('Generated OTP for student login:', generatedOtp); // Removed
       
       setCountdown(300); // 5 minutes
       setStep(3);
@@ -143,18 +143,18 @@ const Login = () => {
     setError('');
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Removed simulate API call
+      // await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Call signup function
-      signupStudent({ name, email, password });
+      // Call signup function from AuthContext
+      await signupStudent({ name, email, password });
       
-      setSuccess('Account created successfully! Welcome to MaintaBIT!');
+      setSuccess('Account created successfully! Please log in.'); // Adjusted success message
       setTimeout(() => {
-        navigate('/');
+        handleModeChange(null, 0); // Switch to login mode after signup
       }, 2000);
     } catch (error) {
-      setError('Failed to create account. Please try again.');
+      setError(error.message || 'Failed to create account. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -175,18 +175,52 @@ const Login = () => {
     setError('');
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Call admin login function
-      loginAdmin({ email, password });
+      // Call admin login function from AuthContext
+      await loginAdmin({ email, password });
       
       setSuccess('Welcome back, Admin!');
       setTimeout(() => {
-        navigate('/');
+        navigate('/dashboard'); // Navigate to dashboard for admin
       }, 2000);
     } catch (error) {
-      setError('Invalid credentials. Please try again.');
+      setError(error.message || 'Invalid credentials. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAdminSignup = async () => {
+    if (!email || !password || !confirmPassword) {
+      setError('Please fill in all fields');
+      return;
+    }
+
+    if (!email.includes('@')) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      await signupAdmin({ email, password });
+      setSuccess('Admin account created successfully! Please log in.');
+      setTimeout(() => {
+        handleModeChange(null, 0); // Switch to login mode after signup
+      }, 2000);
+    } catch (error) {
+      setError(error.message || 'Failed to create admin account. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -202,27 +236,29 @@ const Login = () => {
     setError('');
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Removed simulate API call
+      // await new Promise(resolve => setTimeout(resolve, 1000));
       
-      const isValid = verifyOTP(otp, 'student', email);
+      // Call verifyOTP function from AuthContext (which now calls backend)
+      const isValid = await verifyOTP(email, otp); // Pass email along with otp
       
       if (isValid) {
         setSuccess('Welcome back to MaintaBIT!');
         setTimeout(() => {
-          navigate('/');
+          navigate('/'); // Navigate to home or student dashboard after successful OTP verification
         }, 2000);
       } else {
         setError('Invalid OTP. Please try again.');
       }
     } catch (error) {
-      setError('Verification failed. Please try again.');
+      setError(error.message || 'Verification failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleResendOTP = () => {
+    // This will now correctly trigger the backend to resend OTP via handleStudentLogin
     handleStudentLogin();
   };
 
@@ -268,7 +304,7 @@ const Login = () => {
   };
 
   return (
-    <Container maxWidth="sm" sx={{ mt: 4 }}>
+    <Container maxWidth="sm" sx={{ mt: 4, mb: 4, minHeight: '100vh', py: 4 }}>
       <Fade in timeout={800}>
         <Paper
           elevation={8}
@@ -400,7 +436,14 @@ const Login = () => {
 
               {/* Step 2: Form */}
               {step === 2 && (
-                <Box>
+                <Box component="form" onSubmit={(e) => {
+                  e.preventDefault();
+                  if (mode === 0) {
+                    selectedRole === 'admin' ? handleAdminLogin() : handleStudentLogin();
+                  } else {
+                    selectedRole === 'admin' ? handleAdminSignup() : handleStudentSignup();
+                  }
+                }}>
                   <Typography variant="h6" gutterBottom sx={{ color: 'text.primary' }}>
                     {mode === 0 ? 'Login' : 'Create Account'} as {selectedRole === 'admin' ? 'Admin' : 'Student'}
                   </Typography>
@@ -454,7 +497,7 @@ const Login = () => {
                     className="cursor-target"
                   />
 
-                  {mode === 1 && selectedRole === 'student' && (
+                  {mode === 1 && (selectedRole === 'student' || selectedRole === 'admin') && (
                     <TextField
                       fullWidth
                       label="Confirm Password"
@@ -482,11 +525,7 @@ const Login = () => {
                     fullWidth
                     variant="contained"
                     size="large"
-                    onClick={
-                      mode === 0 
-                        ? (selectedRole === 'admin' ? handleAdminLogin : handleStudentLogin)
-                        : handleStudentSignup
-                    }
+                    type="submit" // Set type to submit
                     disabled={loading}
                     sx={{ mt: 3, py: 1.5 }}
                     className="cursor-target"
@@ -512,7 +551,10 @@ const Login = () => {
 
               {/* Step 3: OTP Verification (Student Login Only) */}
               {step === 3 && (
-                <Box>
+                <Box component="form" onSubmit={(e) => {
+                  e.preventDefault();
+                  handleVerifyOTP();
+                }}>
                   <Typography variant="h6" gutterBottom sx={{ color: 'text.primary' }}>
                     Verify OTP
                   </Typography>
@@ -543,7 +585,7 @@ const Login = () => {
                     fullWidth
                     variant="contained"
                     size="large"
-                    onClick={handleVerifyOTP}
+                    type="submit" // Set type to submit
                     disabled={loading || countdown === 0}
                     sx={{ mt: 3, py: 1.5 }}
                     className="cursor-target"

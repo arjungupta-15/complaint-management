@@ -26,12 +26,26 @@ const Header = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [mobileMenuAnchor, setMobileMenuAnchor] = useState(null);
 
+  const isAdminPage = isAuthenticated && user?.role === 'admin' && (
+    location.pathname === '/dashboard' || 
+    location.pathname === '/manage-options' ||
+    location.pathname === '/all-complaints' ||
+    location.pathname === '/resolved-complaints' ||
+    location.pathname === '/pending-complaints' ||
+    location.pathname === '/reopen-complaints' ||
+    location.pathname === '/escalated-complaints'
+  );
+
+  if (isAdminPage) {
+    return null; // Don't render header for admin pages
+  }
+
   const navigationItems = [
     { label: 'Home', path: '/', requiresAuth: false },
-    { label: 'Feedback', path: '/feedback', requiresAuth: true },
+    { label: 'Feedbackk', path: '/feedback', requiresAuth: true },
     { label: 'FAQs', path: '/faqs', requiresAuth: false },
     { label: 'Contact', path: '/contact', requiresAuth: false },
-    { label: 'Dashboard', path: '/dashboard', requiresAuth: false },
+    { label: 'Dashboard', path: '/dashboard', requiresAuth: true, adminOnly: true },
   ];
 
   const handleProfileMenuOpen = (event) => setAnchorEl(event.currentTarget);
@@ -55,7 +69,19 @@ const Header = () => {
   const isActiveRoute = (path) => location.pathname === path;
 
   const visibleNavigationItems = navigationItems.filter(
-    (item) => !item.requiresAuth || isAuthenticated
+    (item) => {
+      // Show public items
+      if (!item.requiresAuth) return true;
+      // Show authenticated items
+      if (item.requiresAuth && isAuthenticated) {
+        // If item is admin-only, only show for admin users
+        if (item.adminOnly) {
+          return user?.role === 'admin';
+        }
+        return true;
+      }
+      return false;
+    }
   );
 
   return (

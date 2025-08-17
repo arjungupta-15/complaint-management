@@ -8,8 +8,11 @@ import {
   AttachFile, Clear, PriorityHigh, CheckCircle, Schedule
 } from '@mui/icons-material';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 
 const SubmitComplaint = () => {
+  const { user } = useAuth();
+
   const [formData, setFormData] = useState({
     email: '',
     department: '',
@@ -24,20 +27,140 @@ const SubmitComplaint = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [fileName, setFileName] = useState('');
+  const [categories, setCategories] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [subCategories, setSubCategories] = useState([]);
+  const [loadingOptions, setLoadingOptions] = useState(true);
+  const [loadingSubCategories, setLoadingSubCategories] = useState(false);
 
-  const categories = ['facility', 'request', 'hostel'];
-  const subCategoryOptions = {
-    facility: ['washroom', 'tap', 'Water-Cooler', 'Garbage', 'Lights', 'Fan', 'other'],
-    request: ['wheelchair', 'Table-Cloth', 'Seminar-Hall', 'Sound-System', 'mat', 'other'],
-    hostel: ['cleaning', 'electricity', 'water', 'other'],
+  // Fetch initial options (categories and departments) from backend
+  useEffect(() => {
+    const fetchOptions = async () => {
+      try {
+        console.log('📡 Fetching initial options...');
+        const response = await axios.get('http://localhost:5000/api/dynamic-options');
+        console.log('✅ Initial options response:', response.data);
+        
+        const options = response.data;
+
+        const categoryOptions = options.filter(opt => opt.type === 'category');
+        const departmentOptions = options.filter(opt => opt.type === 'department');
+
+        console.log('📋 Categories found:', categoryOptions.length);
+        console.log('🏢 Departments found:', departmentOptions.length);
+
+        setCategories(categoryOptions);
+        setDepartments(departmentOptions);
+
+      } catch (err) {
+        console.error('❌ Error fetching options:', err);
+        console.error('❌ Error details:', err.response?.data || err.message);
+        
+        // Fallback to hardcoded options if server is not available
+        console.log('🔄 Using hardcoded options as fallback');
+        setCategories(getHardcodedCategories());
+        setDepartments(getHardcodedDepartments());
+      } finally {
+        setLoadingOptions(false);
+      }
+    };
+    fetchOptions();
+  }, []);
+
+  // Auto-fill email from authenticated user
+  useEffect(() => {
+    if (user?.email) {
+      setFormData((prev) => ({ ...prev, email: user.email }));
+    }
+  }, [user?.email]);
+
+  // Hardcoded categories as fallback
+  const getHardcodedCategories = () => {
+    return [
+      { value: 'facility' },
+      { value: 'request' },
+      { value: 'hostel' }
+    ];
   };
 
-  const departmentOptions = [
-    'Computer Engineering',
-    'Civil Engineering',
-    'Electrical Engineering',
-    'Mechanical Engineering',
-  ];
+  // Hardcoded departments as fallback
+  const getHardcodedDepartments = () => {
+    return [
+      { value: 'Computer Science' },
+      { value: 'Electrical Engineering' },
+      { value: 'Mechanical Engineering' },
+      { value: 'Civil Engineering' },
+      { value: 'Information Technology' }
+    ];
+  };
+
+  // Fetch subcategories when category changes from backend
+  useEffect(() => {
+    console.log('🔍 Category changed to:', formData.category);
+    if (formData.category) {
+      const fetchSubCategories = async () => {
+        setLoadingSubCategories(true);
+        try {
+          console.log('📡 Fetching subcategories for:', formData.category);
+          // Convert to lowercase to match database
+          const categoryLower = formData.category.toLowerCase();
+          const url = `http://localhost:5000/api/dynamic-options?type=subCategory&parentCategory=${categoryLower}`;
+          console.log('🌐 API URL:', url);
+          
+          const response = await axios.get(url);
+          console.log('✅ Subcategories response:', response.data);
+          setSubCategories(response.data);
+        } catch (err) {
+          console.error("❌ Failed to fetch subcategories:", err);
+          console.error("❌ Error details:", err.response?.data || err.message);
+          
+          // Fallback to hardcoded subcategories if server is not available
+          console.log('🔄 Using hardcoded subcategories as fallback');
+          const hardcodedSubs = getHardcodedSubcategories(formData.category);
+          setSubCategories(hardcodedSubs);
+        } finally {
+          setLoadingSubCategories(false);
+        }
+      };
+      fetchSubCategories();
+    } else {
+      setSubCategories([]);
+    }
+  }, [formData.category]);
+
+  // Hardcoded subcategories as fallback
+  const getHardcodedSubcategories = (category) => {
+    // Convert to lowercase for comparison
+    const categoryLower = category.toLowerCase();
+    
+    switch (categoryLower) {
+      case 'facility':
+        return [
+          { value: 'washroom' },
+          { value: 'Water-Cooler' },
+          { value: 'Garbage' },
+          { value: 'tap' },
+          { value: 'Fan' },
+          { value: 'Lights' }
+        ];
+      case 'request':
+        return [
+          { value: 'wheelchair' },
+          { value: 'mat' },
+          { value: 'Table-Cloth' },
+          { value: 'Sound-System' },
+          { value: 'Seminar-Hall' }
+        ];
+      case 'hostel':
+        return [
+          { value: 'electricity' },
+          { value: 'cleaning' },
+          { value: 'water' }
+        ];
+      default:
+        return [];
+    }
+  };
 
   const autoSetPriority = (category, sub) => {
     if (category === 'facility') {
@@ -126,7 +249,7 @@ const SubmitComplaint = () => {
     formDataToSend.append('department', department);
     formDataToSend.append('category', category);
     formDataToSend.append('subCategory', subCategory);
-    formDataToSend.append('subOther', formData.subOther); // Fixed: Use formData.subOther
+    formDataToSend.append('subOther', formData.subOther);
     formDataToSend.append('description', description);
     formDataToSend.append('priority', formData.priority);
     if (formData.file) {
@@ -142,7 +265,7 @@ const SubmitComplaint = () => {
 
       setSuccess(response.data.message);
       setFormData({
-        email: '',
+        email: user?.email || '',
         department: '',
         category: '',
         subCategory: '',
@@ -165,6 +288,7 @@ const SubmitComplaint = () => {
         minHeight: '100vh',
         py: 6,
         px: 2,
+        overflow: 'auto',
       }}
     >
       <Container maxWidth="md">
@@ -187,6 +311,8 @@ const SubmitComplaint = () => {
               value={formData.email}
               onChange={(e) => handleChange('email', e.target.value)}
               required
+              InputProps={{ readOnly: true }}
+              helperText={formData.email ? 'Fetched from your login' : ''}
               sx={{ mb: 3 }}
             />
 
@@ -197,9 +323,10 @@ const SubmitComplaint = () => {
                 onChange={(e) => handleChange('department', e.target.value)}
                 label="Department"
                 required
+                disabled={loadingOptions}
               >
-                {departmentOptions.map(dep => (
-                  <MenuItem key={dep} value={dep}>{dep}</MenuItem>
+                {departments.map(dep => (
+                  <MenuItem key={dep.value} value={dep.value}>{dep.value}</MenuItem>
                 ))}
               </Select>
             </FormControl>
@@ -211,26 +338,39 @@ const SubmitComplaint = () => {
                 onChange={(e) => handleChange('category', e.target.value)}
                 label="Category"
                 required
+                disabled={loadingOptions}
               >
                 {categories.map(cat => (
-                  <MenuItem key={cat} value={cat}>{cat}</MenuItem>
+                  <MenuItem key={cat.value} value={cat.value}>{cat.value}</MenuItem>
                 ))}
               </Select>
             </FormControl>
 
             {formData.category && (
               <FormControl fullWidth sx={{ mb: 3 }}>
-                <InputLabel>{`${formData.category} Type`}</InputLabel>
+                <InputLabel>
+                  {loadingSubCategories ? 'Loading...' : `${formData.category.charAt(0).toUpperCase() + formData.category.slice(1)} Type`}
+                </InputLabel>
                 <Select
                   value={formData.subCategory}
                   onChange={(e) => handleChange('subCategory', e.target.value)}
-                  label={`${formData.category} Type`}
+                  label={loadingSubCategories ? 'Loading...' : `${formData.category.charAt(0).toUpperCase() + formData.category.slice(1)} Type`}
                   required
+                  disabled={loadingSubCategories}
                 >
-                  {subCategoryOptions[formData.category].map(opt => (
-                    <MenuItem key={opt} value={opt}>{opt}</MenuItem>
-                  ))}
+                  {subCategories.length === 0 ? (
+                    <MenuItem disabled>No options available</MenuItem>
+                  ) : (
+                    subCategories.map(opt => (
+                      <MenuItem key={opt.value} value={opt.value}>{opt.value}</MenuItem>
+                    ))
+                  )}
                 </Select>
+                {subCategories.length === 0 && !loadingSubCategories && formData.category && (
+                  <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block' }}>
+                    No subcategories found for {formData.category}. Please contact admin.
+                  </Typography>
+                )}
               </FormControl>
             )}
 
