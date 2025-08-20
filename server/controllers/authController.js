@@ -21,10 +21,23 @@ const transporter = nodemailer.createTransport({
 // ✅ Function to send OTP email
 const sendOTPEmail = async (email, otp) => {
   const mailOptions = {
-    from: "ag.arjungupta15@gmail.com",
+    from: '"MaintaBIT" <ag.arjungupta15@gmail.com>', // Sender name + email
     to: email,
-    subject: 'Your OTP Code',
-    text: `Your OTP code is ${otp}. It will expire in 5 minutes.`
+    subject: 'Your One-Time Password (OTP) - Valid for 5 minutes',
+    html: `
+      <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+        <h2 style="color: #2c3e50;">Hello 👋,</h2>
+        <p>We received a request to verify your email address. Please use the OTP below to complete your verification process:</p>
+        
+        <div style="background: #f4f4f4; padding: 15px; text-align: center; border-radius: 8px; margin: 20px 0;">
+          <h1 style="letter-spacing: 3px; color: #e74c3c;">${otp}</h1>
+        </div>
+
+        <p><b>Note:</b> This OTP is valid only for <b>5 minutes</b>. If you did not request this, please ignore this email.</p>
+        
+        <p style="margin-top: 30px;">Regards,<br/>🚀 College Complaint Management System</p>
+      </div>
+    `
   };
 
   await transporter.sendMail(mailOptions);

@@ -42,12 +42,12 @@ const seedData = async () => {
       { type: 'category', value: 'hostel' },
     ];
 
-    // Add initial departments
+    // Add initial departments (with codes where available)
     const departments = [
-      { type: 'department', value: 'Computer Science' },
-      { type: 'department', value: 'Electrical Engineering' },
-      { type: 'department', value: 'Mechanical Engineering' },
-      { type: 'department', value: 'Civil Engineering' },
+      { type: 'department', value: 'Computer Science', code: '24510' },
+      { type: 'department', value: 'Electrical Engineering', code: '29310' },
+      { type: 'department', value: 'Mechanical Engineering', code: '61210' },
+      { type: 'department', value: 'Civil Engineering', code: '19110' },
       { type: 'department', value: 'Information Technology' },
     ];
 
@@ -114,6 +114,31 @@ const seedData = async () => {
   }
 };
 
+// Ensure department codes exist/are updated even if DB was seeded earlier
+const ensureDepartmentCodes = async () => {
+  try {
+    const codeMap = {
+      'computer engineering': '24510',
+      'computer science': '24510',
+      'civil engineering': '19110',
+      'electrical engineering': '29310',
+      'mechanical engineering': '61210',
+    };
+
+    const departments = await DynamicOption.find({ type: 'department' });
+    for (const dept of departments) {
+      const key = String(dept.value || '').toLowerCase();
+      const desiredCode = codeMap[key];
+      if (desiredCode && dept.code !== desiredCode) {
+        await DynamicOption.findByIdAndUpdate(dept._id, { code: desiredCode });
+      }
+    }
+    console.log('✅ Department codes ensured/updated');
+  } catch (err) {
+    console.error('❌ Failed ensuring department codes:', err);
+  }
+};
+
 app.use('/api/auth', authRoutes);
 app.use('/api', feedbackRoutes);
 app.use('/api', contactRoutes)
@@ -125,4 +150,6 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   // Seed data when server starts
   seedData();
+  // Also ensure department codes are present
+  ensureDepartmentCodes();
 });

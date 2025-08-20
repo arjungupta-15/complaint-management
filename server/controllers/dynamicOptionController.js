@@ -3,8 +3,8 @@ const DynamicOption = require('../models/DynamicOption');
 // Create a new dynamic option
 exports.createOption = async (req, res) => {
   try {
-    const { type, value, parentCategory } = req.body;
-    const newOption = new DynamicOption({ type, value, parentCategory });
+    const { type, value, parentCategory, code } = req.body;
+    const newOption = new DynamicOption({ type, value, parentCategory, code });
     await newOption.save();
     res.status(201).json(newOption);
   } catch (err) {
@@ -38,10 +38,10 @@ exports.getOptions = async (req, res) => {
 exports.updateOption = async (req, res) => {
   try {
     const { id } = req.params;
-    const { type, value, isActive, parentCategory } = req.body;
+    const { type, value, isActive, parentCategory, code } = req.body;
     const updatedOption = await DynamicOption.findByIdAndUpdate(
       id,
-      { type, value, isActive, parentCategory },
+      { type, value, isActive, parentCategory, code },
       { new: true, runValidators: true }
     );
     if (!updatedOption) {

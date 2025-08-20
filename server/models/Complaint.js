@@ -42,11 +42,26 @@ const complaintSchema = new mongoose.Schema({
     trim: true,
     default: '',
   },
+  // Generated tracking identifier: 4649 + departmentCode + sequence
+  trackingId: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  // Workflow status for admin dashboard and tracking
+  status: {
+    type: String,
+    default: 'pending',
+    trim: true,
+  },
   submittedAt: {
     type: Date,
     required: true,
     default: Date.now,
   },
-});
+  resolvedAt: {
+    type: Date,
+  },
+}, { timestamps: true });
 
 module.exports = mongoose.model('Complaint', complaintSchema);

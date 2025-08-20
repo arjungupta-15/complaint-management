@@ -1,4 +1,7 @@
 import React, { useEffect, useState } from "react";
+import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -8,42 +11,12 @@ import {
   TableHead,
   TableRow,
   Container,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Paper,
   Chip,
   Divider,
+  Button,
 } from "@mui/material";
 
-// 💾 Dummy complaint data
-const dummyComplaints = [
-  {
-    id: 1,
-    tracking_id: "CMP123456",
-    email: "student1@example.com",
-    category: "Electricity",
-    status: "pending",
-    created_at: "2025-07-25",
-  },
-  {
-    id: 2,
-    tracking_id: "CMP654321",
-    email: "student2@example.com",
-    category: "Water Supply",
-    status: "resolved",
-    created_at: "2025-07-20",
-  },
-  {
-    id: 3,
-    tracking_id: "CMP888999",
-    email: "student3@example.com",
-    category: "Wi-Fi",
-    status: "in progress",
-    created_at: "2025-07-27",
-  },
-];
 
 const getStatusColor = (status) => {
   switch (status) {
@@ -59,20 +32,41 @@ const getStatusColor = (status) => {
 };
 
 const StudentDashboard = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [complaints, setComplaints] = useState([]);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    // simulate fetch
-    setTimeout(() => {
-      setComplaints(dummyComplaints);
-    }, 500);
-  }, []);
+    const fetchMyComplaints = async () => {
+      if (!user?.email) return;
+      try {
+        const res = await axios.get(`http://localhost:5000/api/complaints-by-email`, { params: { email: user.email } });
+        setComplaints(res.data.map((c, idx) => ({
+          id: c._id,
+          tracking_id: c.trackingId,
+          email: c.email,
+          category: c.category,
+          status: c.status?.replace('_', ' '),
+          created_at: new Date(c.createdAt || c.submittedAt).toLocaleDateString(),
+        })));
+      } catch (e) {
+        setError('Failed to load your complaints');
+      }
+    };
+    fetchMyComplaints();
+  }, [user?.email]);
+
+  const goToTrack = (trackingId) => {
+    if (!trackingId) return;
+    navigate(`/track-complaint?id=${trackingId}`);
+  };
 
   const handleAction = (id, action) => {
-    const name = dummyComplaints.find((c) => c.id === id)?.tracking_id;
-    if (action === "reopen") {
+    const name = complaints.find((c) => c.id === id)?.tracking_id;
+    if (action === 'reopen') {
       alert(`Complaint ${name} reopened.`);
-    } else if (action === "escalate") {
+    } else if (action === 'escalate') {
       alert(`Complaint ${name} escalated.`);
     }
   };
@@ -99,14 +93,14 @@ const StudentDashboard = () => {
             🎓 Student Dashboard
           </Typography>
           <Divider sx={{ my: 2 }} />
-          <Typography variant="h6" sx={{ mb: 3, color: "#34495e" }}>
-            My Complaints
-          </Typography>
+          <Typography variant="h6" sx={{ mb: 3, color: "#34495e" }}>My Complaints</Typography>
+          {error && (
+            <Typography color="error" sx={{ mb: 2 }}>{error}</Typography>
+          )}
 
           <Table sx={{ borderRadius: 2 }}>
             <TableHead sx={{ backgroundColor: "#ecf0f1" }}>
               <TableRow>
-                <TableCell><b>ID</b></TableCell>
                 <TableCell><b>Tracking ID</b></TableCell>
                 <TableCell><b>Email</b></TableCell>
                 <TableCell><b>Category</b></TableCell>
@@ -118,7 +112,6 @@ const StudentDashboard = () => {
             <TableBody>
               {complaints.map((complaint) => (
                 <TableRow key={complaint.id} hover>
-                  <TableCell>{complaint.id}</TableCell>
                   <TableCell>{complaint.tracking_id}</TableCell>
                   <TableCell>{complaint.email}</TableCell>
                   <TableCell>{complaint.category}</TableCell>
@@ -131,20 +124,22 @@ const StudentDashboard = () => {
                   </TableCell>
                   <TableCell>{complaint.created_at}</TableCell>
                   <TableCell>
-                    <FormControl fullWidth size="small">
-                      <InputLabel>Action</InputLabel>
-                      <Select
-                        defaultValue=""
-                        onChange={(e) =>
-                          handleAction(complaint.id, e.target.value)
-                        }
-                        label="Action"
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Button 
+                        size="small" 
+                        variant="outlined" 
+                        onClick={() => handleAction(complaint.id, 'reopen')}
                       >
-                        <MenuItem value="">Select Action</MenuItem>
-                        <MenuItem value="reopen">Reopen</MenuItem>
-                        <MenuItem value="escalate">Escalate</MenuItem>
-                      </Select>
-                    </FormControl>
+                        Reopen
+                      </Button>
+                      <Button 
+                        size="small" 
+                        variant="contained" 
+                        onClick={() => handleAction(complaint.id, 'escalate')}
+                      >
+                        Escalate
+                      </Button>
+                    </Box>
                   </TableCell>
                 </TableRow>
               ))}
