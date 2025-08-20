@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Typography,
   TextField,
@@ -30,6 +30,7 @@ import {
   PriorityHigh,
 } from "@mui/icons-material";
 import axios from 'axios'; // Import axios
+import { useLocation } from 'react-router-dom';
 
 // Utility functions
 const getStatusColor = (status) => {
@@ -130,21 +131,34 @@ const TrackComplaint = () => {
   const [loading, setLoading] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const location = useLocation();
 
-  const handleTrack = async () => {
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const idParam = params.get('id');
+    if (idParam) {
+      setTrackingId(idParam);
+      // auto-track when navigated with id param
+      handleTrack(idParam);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleTrack = async (idOverride) => {
     setError("");
     setComplaint(null);
     setLoading(true);
 
-    if (!trackingId) {
+    const idToUse = (idOverride ?? trackingId).trim();
+    if (!idToUse) {
       setError("Please enter a Tracking ID.");
       setLoading(false);
       return;
     }
 
     try {
-      // Assuming the tracking ID is the MongoDB _id
-      const response = await axios.get(`http://localhost:5000/api/complaints/${trackingId.trim()}`);
+      // Fetch by trackingId
+      const response = await axios.get(`http://localhost:5000/api/complaint/by-tracking/${idToUse}`);
       setComplaint(response.data);
     } catch (err) {
       console.error("Error tracking complaint:", err);
@@ -190,7 +204,7 @@ const TrackComplaint = () => {
     />
     <Button
       variant="contained"
-      onClick={handleTrack}
+      onClick={() => handleTrack()}
       size="large"
       sx={{ px: 4 }}
       disabled={loading}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box, Container, Typography, Paper, Grid, Card, CardContent,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
@@ -9,7 +9,7 @@ import {
 import {
   Dashboard, BugReport, CheckCircle, Pending, Refresh,
   Edit, Delete, PriorityHigh, Schedule, TrendingUp,
-  BarChart, PieChart, ShowChart, Analytics
+  BarChart, PieChart, ShowChart, Analytics, Save, Close
 } from '@mui/icons-material';
 import {
   BarChart as RechartsBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -17,6 +17,49 @@ import {
   LineChart, Line
 } from 'recharts';
 import axios from 'axios';
+
+// Helper Card for consistent chart layout and alignment
+const ChartCard = ({ icon, title, children }) => (
+  <Paper 
+    elevation={3} 
+    sx={{ 
+      p: 3, 
+      height: 450, 
+      borderRadius: 3,
+      display: 'flex',
+      flexDirection: 'column',
+      background: 'white'
+    }}
+  >
+    <Box display="flex" alignItems="center" mb={2}>
+      {icon}
+      <Typography variant="h6" sx={{ fontWeight: 600, color: '#2c3e50', ml: 2 }}>
+        {title}
+      </Typography>
+    </Box>
+    <Divider sx={{ mb: 2 }} />
+    <Box sx={{ flex: 1, minHeight: 0 }}>
+      {children}
+    </Box>
+  </Paper>
+);
+
+// Reusable section wrapper for settings lists
+const SectionCard = ({ icon, title, children, actions }) => (
+  <Paper elevation={3} sx={{ p: 3, borderRadius: 3 }}>
+    <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+      <Box display="flex" alignItems="center">
+        {icon}
+        <Typography variant="h6" sx={{ fontWeight: 600, color: '#2c3e50', ml: 1.5 }}>
+          {title}
+        </Typography>
+      </Box>
+      {actions}
+    </Box>
+    <Divider sx={{ mb: 2 }} />
+    {children}
+  </Paper>
+);
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState(0);
@@ -31,7 +74,10 @@ const AdminDashboard = () => {
   const [categories, setCategories] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [subCategories, setSubCategories] = useState([]);
-  const [newOption, setNewOption] = useState({ type: 'category', value: '', parentCategory: '' });
+  const [newOption, setNewOption] = useState({ type: 'category', value: '', parentCategory: '', code: '' });
+  // Inline edit state for department code
+  const [inlineEditDeptId, setInlineEditDeptId] = useState(null);
+  const [inlineEditCode, setInlineEditCode] = useState('');
 
   // Dialog states
   const [addOptionDialog, setAddOptionDialog] = useState(false);
@@ -130,7 +176,7 @@ const AdminDashboard = () => {
   const handleAddOption = async () => {
     try {
       await axios.post('http://localhost:5000/api/dynamic-options', newOption);
-      setNewOption({ type: 'category', value: '', parentCategory: '' });
+      setNewOption({ type: 'category', value: '', parentCategory: '', code: '' });
       setAddOptionDialog(false);
       fetchDynamicOptions();
     } catch (err) {
@@ -195,15 +241,37 @@ const AdminDashboard = () => {
     { name: 'Request', value: complaints.filter(c => c.category === 'request').length, color: '#9c27b0' },
     { name: 'Hostel', value: complaints.filter(c => c.category === 'hostel').length, color: '#ff5722' }
   ];
+  
+  // Build Monthly Trend dynamically from complaints data (last 6 months)
+  const monthlyData = useMemo(() => {
+    const monthsToShow = 6;
+    const now = new Date();
+    const months = [];
+    for (let i = monthsToShow - 1; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push({
+        key: `${d.getFullYear()}-${d.getMonth()}`,
+        month: d.toLocaleString('default', { month: 'short' }),
+      });
+    }
 
-  const monthlyData = [
-    { month: 'Jan', complaints: 15, resolved: 12 },
-    { month: 'Feb', complaints: 18, resolved: 15 },
-    { month: 'Mar', complaints: 22, resolved: 19 },
-    { month: 'Apr', complaints: 25, resolved: 22 },
-    { month: 'May', complaints: 20, resolved: 18 },
-    { month: 'Jun', complaints: 28, resolved: 25 }
-  ];
+    const counts = months.reduce((acc, m) => {
+      acc[m.key] = { complaints: 0, resolved: 0, month: m.month };
+      return acc;
+    }, {});
+
+    complaints.forEach((c) => {
+      if (!c.createdAt) return;
+      const created = new Date(c.createdAt);
+      const key = `${created.getFullYear()}-${created.getMonth()}`;
+      if (counts[key]) {
+        counts[key].complaints += 1;
+        if (c.status === 'resolved') counts[key].resolved += 1;
+      }
+    });
+
+    return months.map((m) => counts[m.key]);
+  }, [complaints]);
 
   const getPriorityColor = (priority) => {
     switch (priority) {
@@ -454,23 +522,8 @@ const AdminDashboard = () => {
             <Grid container spacing={3}>
               {/* Status Distribution Pie Chart */}
               <Grid item xs={12} lg={6}>
-                <Paper 
-                  elevation={3} 
-                  sx={{ 
-                    p: 4, 
-                    height: 450, 
-                    borderRadius: 3,
-                    background: 'white'
-                  }}
-                >
-                  <Box display="flex" alignItems="center" mb={3}>
-                    <PieChart sx={{ mr: 2, color: '#667eea', fontSize: 30 }} />
-                    <Typography variant="h6" sx={{ fontWeight: 600, color: '#2c3e50' }}>
-                      Status Distribution
-                    </Typography>
-                  </Box>
-                  <Divider sx={{ mb: 3 }} />
-                  <ResponsiveContainer width="100%" height={350}>
+                <ChartCard icon={<PieChart sx={{ color: '#667eea', fontSize: 28 }} />} title="Status Distribution">
+                  <ResponsiveContainer width="100%" height="100%">
                     <RechartsPieChart>
                       <Pie
                         data={statusChartData}
@@ -496,28 +549,13 @@ const AdminDashboard = () => {
                       />
                     </RechartsPieChart>
                   </ResponsiveContainer>
-                </Paper>
+                </ChartCard>
               </Grid>
 
               {/* Priority Distribution Bar Chart */}
               <Grid item xs={12} lg={6}>
-                <Paper 
-                  elevation={3} 
-                  sx={{ 
-                    p: 4, 
-                    height: 450, 
-                    borderRadius: 3,
-                    background: 'white'
-                  }}
-                >
-                  <Box display="flex" alignItems="center" mb={3}>
-                    <BarChart sx={{ mr: 2, color: '#667eea', fontSize: 30 }} />
-                    <Typography variant="h6" sx={{ fontWeight: 600, color: '#2c3e50' }}>
-                      Priority Distribution
-                    </Typography>
-                  </Box>
-                  <Divider sx={{ mb: 3 }} />
-                  <ResponsiveContainer width="100%" height={350}>
+                <ChartCard icon={<BarChart sx={{ color: '#667eea', fontSize: 28 }} />} title="Priority Distribution">
+                  <ResponsiveContainer width="100%" height="100%">
                     <RechartsBarChart data={priorityChartData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis 
@@ -544,28 +582,13 @@ const AdminDashboard = () => {
                       </Bar>
                     </RechartsBarChart>
                   </ResponsiveContainer>
-                </Paper>
+                </ChartCard>
               </Grid>
 
               {/* Category Distribution */}
               <Grid item xs={12} lg={6}>
-                <Paper 
-                  elevation={3} 
-                  sx={{ 
-                    p: 4, 
-                    height: 450, 
-                    borderRadius: 3,
-                    background: 'white'
-                  }}
-                >
-                  <Box display="flex" alignItems="center" mb={3}>
-                    <ShowChart sx={{ mr: 2, color: '#667eea', fontSize: 30 }} />
-                    <Typography variant="h6" sx={{ fontWeight: 600, color: '#2c3e50' }}>
-                      Category Distribution
-                    </Typography>
-                  </Box>
-                  <Divider sx={{ mb: 3 }} />
-                  <ResponsiveContainer width="100%" height={350}>
+                <ChartCard icon={<ShowChart sx={{ color: '#667eea', fontSize: 28 }} />} title="Category Distribution">
+                  <ResponsiveContainer width="100%" height="100%">
                     <RechartsBarChart data={categoryChartData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis 
@@ -592,71 +615,57 @@ const AdminDashboard = () => {
                       </Bar>
                     </RechartsBarChart>
                   </ResponsiveContainer>
-                </Paper>
+                </ChartCard>
               </Grid>
 
               {/* Monthly Trend Line Chart */}
               <Grid item xs={12} lg={6}>
-                <Paper 
-                  elevation={3} 
-                  sx={{ 
-                    p: 4, 
-                    height: 450, 
-                    borderRadius: 3,
-                    background: 'white'
-                  }}
-                >
-                  <Box display="flex" alignItems="center" mb={3}>
-                    <TrendingUp sx={{ mr: 2, color: '#667eea', fontSize: 30 }} />
-                    <Typography variant="h6" sx={{ fontWeight: 600, color: '#2c3e50' }}>
-                      Monthly Trend
-                    </Typography>
-                  </Box>
-                  <Divider sx={{ mb: 3 }} />
-                  <ResponsiveContainer width="100%" height={350}>
-                    <LineChart data={monthlyData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <ChartCard icon={<TrendingUp sx={{ color: '#667eea', fontSize: 28 }} />} title="Monthly Trend">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={monthlyData} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#eceff1" />
                       <XAxis 
                         dataKey="month" 
-                        tick={{ fontSize: 12, fill: '#666' }}
-                        axisLine={{ stroke: '#ddd' }}
+                        tick={{ fontSize: 12, fill: '#607d8b' }}
+                        axisLine={{ stroke: '#cfd8dc' }}
                       />
                       <YAxis 
-                        tick={{ fontSize: 12, fill: '#666' }}
-                        axisLine={{ stroke: '#ddd' }}
+                        allowDecimals={false}
+                        tick={{ fontSize: 12, fill: '#607d8b' }}
+                        axisLine={{ stroke: '#cfd8dc' }}
                       />
                       <Tooltip 
+                        formatter={(value) => [value, 'Count']}
+                        labelFormatter={(label) => `Month: ${label}`}
                         contentStyle={{
-                          backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                          border: 'none',
+                          backgroundColor: 'rgba(255, 255, 255, 0.98)',
+                          border: '1px solid #eceff1',
                           borderRadius: 8,
-                          boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+                          boxShadow: '0 4px 20px rgba(0,0,0,0.08)'
                         }}
                       />
-                      <Legend 
-                        wrapperStyle={{
-                          paddingTop: 20
-                        }}
-                      />
+                      <Legend verticalAlign="top" height={36} />
                       <Line 
                         type="monotone" 
                         dataKey="complaints" 
+                        name="Complaints"
                         stroke="#667eea" 
                         strokeWidth={3}
-                        dot={{ fill: '#667eea', strokeWidth: 2, r: 6 }}
-                        activeDot={{ r: 8, stroke: '#667eea', strokeWidth: 2 }}
+                        dot={{ r: 4 }}
+                        activeDot={{ r: 6 }}
                       />
                       <Line 
                         type="monotone" 
                         dataKey="resolved" 
+                        name="Resolved"
                         stroke="#4caf50" 
                         strokeWidth={3}
-                        dot={{ fill: '#4caf50', strokeWidth: 2, r: 6 }}
-                        activeDot={{ r: 8, stroke: '#4caf50', strokeWidth: 2 }}
+                        dot={{ r: 4 }}
+                        activeDot={{ r: 6 }}
                       />
                     </LineChart>
                   </ResponsiveContainer>
-                </Paper>
+                </ChartCard>
               </Grid>
             </Grid>
           </Box>
@@ -834,222 +843,151 @@ const AdminDashboard = () => {
               Manage Dynamic Options
             </Typography>
             <Grid container spacing={3}>
-              {/* Categories */}
-              <Grid item xs={12} md={4}>
-                <Paper elevation={3} sx={{ p: 3, borderRadius: 3, height: 'fit-content' }}>
-                  <Box display="flex" alignItems="center" mb={3}>
-                    <BarChart sx={{ mr: 2, color: '#667eea' }} />
-                    <Typography variant="h6" sx={{ fontWeight: 600, color: '#2c3e50' }}>
-                      Categories
-                    </Typography>
-                  </Box>
-                  <Divider sx={{ mb: 3 }} />
-                  {categories.map((category) => (
-                    <Box 
-                      key={category._id} 
-                      sx={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center', 
-                        mb: 2,
-                        p: 2,
-                        borderRadius: 2,
-                        backgroundColor: '#f8f9fa',
-                        '&:hover': {
-                          backgroundColor: '#e9ecef'
-                        }
-                      }}
-                    >
-                      <Typography sx={{ fontWeight: 500 }}>{category.value}</Typography>
-                      <Box>
-                        <IconButton 
-                          size="small" 
-                          onClick={() => {
-                            setEditingOption(category);
-                            setEditOptionDialog(true);
-                          }}
-                          sx={{ color: '#667eea' }}
+              <Grid item xs={12}>
+                <SectionCard 
+                  icon={<TrendingUp sx={{ color: '#667eea' }} />} 
+                  title="Manage Options"
+                  actions={null}
+                >
+                  <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                    {/* Categories Panel */}
+                    <Box sx={{ flex: '1 1 340px', minWidth: 300 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>Categories</Typography>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          sx={{ borderRadius: 2, textTransform: 'none' }}
+                          onClick={() => { setNewOption({ type: 'category', value: '', parentCategory: '', code: '' }); setAddOptionDialog(true); }}
                         >
-                          <Edit />
-                        </IconButton>
-                        <IconButton 
-                          size="small" 
-                          onClick={() => handleDeleteOption(category._id)}
-                          sx={{ color: '#f44336' }}
-                        >
-                          <Delete />
-                        </IconButton>
+                          Add
+                        </Button>
                       </Box>
+                      <TableContainer>
+                        <Table size="small">
+                          <TableHead>
+                            <TableRow>
+                              <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
+                              <TableCell align="right" sx={{ fontWeight: 600 }}>Actions</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {categories.map((category) => (
+                              <TableRow key={category._id} hover>
+                                <TableCell sx={{ fontWeight: 500 }}>{category.value}</TableCell>
+                                <TableCell align="right">
+                                  <IconButton size="small" onClick={() => { setEditingOption(category); setEditOptionDialog(true); }} sx={{ color: '#667eea' }}>
+                                    <Edit />
+                                  </IconButton>
+                                  <IconButton size="small" onClick={() => handleDeleteOption(category._id)} sx={{ color: '#f44336' }}>
+                                    <Delete />
+                                  </IconButton>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
                     </Box>
-                  ))}
-                  <Button
-                    variant="outlined"
-                    fullWidth
-                    sx={{ 
-                      mt: 2,
-                      borderRadius: 2,
-                      borderColor: '#667eea',
-                      color: '#667eea',
-                      '&:hover': {
-                        borderColor: '#5a6fd8',
-                        backgroundColor: 'rgba(102, 126, 234, 0.04)'
-                      }
-                    }}
-                    onClick={() => {
-                      setNewOption({ type: 'category', value: '', parentCategory: '' });
-                      setAddOptionDialog(true);
-                    }}
-                  >
-                    Add Category
-                  </Button>
-                </Paper>
-              </Grid>
 
-              {/* Departments */}
-              <Grid item xs={12} md={4}>
-                <Paper elevation={3} sx={{ p: 3, borderRadius: 3, height: 'fit-content' }}>
-                  <Box display="flex" alignItems="center" mb={3}>
-                    <BarChart sx={{ mr: 2, color: '#4caf50' }} />
-                    <Typography variant="h6" sx={{ fontWeight: 600, color: '#2c3e50' }}>
-                      Departments
-                    </Typography>
-                  </Box>
-                  <Divider sx={{ mb: 3 }} />
-                  {departments.map((dept) => (
-                    <Box 
-                      key={dept._id} 
-                      sx={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center', 
-                        mb: 2,
-                        p: 2,
-                        borderRadius: 2,
-                        backgroundColor: '#f8f9fa',
-                        '&:hover': {
-                          backgroundColor: '#e9ecef'
-                        }
-                      }}
-                    >
-                      <Typography sx={{ fontWeight: 500 }}>{dept.value}</Typography>
-                      <Box>
-                        <IconButton 
-                          size="small" 
-                          onClick={() => {
-                            setEditingOption(dept);
-                            setEditOptionDialog(true);
-                          }}
-                          sx={{ color: '#4caf50' }}
+                    {/* Departments Panel */}
+                    <Box sx={{ flex: '1 1 340px', minWidth: 300 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>Departments</Typography>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          sx={{ borderRadius: 2, textTransform: 'none' }}
+                          onClick={() => { setNewOption({ type: 'department', value: '', parentCategory: '', code: '' }); setAddOptionDialog(true); }}
                         >
-                          <Edit />
-                        </IconButton>
-                        <IconButton 
-                          size="small" 
-                          onClick={() => handleDeleteOption(dept._id)}
-                          sx={{ color: '#f44336' }}
-                        >
-                          <Delete />
-                        </IconButton>
+                          Add
+                        </Button>
                       </Box>
+                      <TableContainer>
+                        <Table size="small">
+                          <TableHead>
+                            <TableRow>
+                              <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
+                              <TableCell sx={{ fontWeight: 600 }}>Code</TableCell>
+                              <TableCell align="right" sx={{ fontWeight: 600 }}>Actions</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {departments.map((dept) => (
+                              <TableRow key={dept._id} hover>
+                                <TableCell sx={{ fontWeight: 500 }}>{dept.value}</TableCell>
+                                <TableCell width={160}>
+                                  <TextField
+                                    size="small"
+                                    placeholder="e.g. 24510"
+                                    value={(editingOption && editingOption._id === dept._id ? (editingOption.code || '') : (dept.code || ''))}
+                                    onFocus={() => { if (!editingOption || editingOption._id !== dept._id) { setEditingOption({ ...dept }); } }}
+                                    onChange={(e) => setEditingOption({ ...(editingOption && editingOption._id === dept._id ? editingOption : dept), code: e.target.value })}
+                                  />
+                                </TableCell>
+                                <TableCell align="right">
+                                  <IconButton size="small" title="Edit" onClick={() => { setEditingOption(dept); setEditOptionDialog(true); }} sx={{ color: '#4caf50' }}>
+                                    <Edit />
+                                  </IconButton>
+                                  <IconButton size="small" title="Save Code" onClick={async () => { try { await axios.put(`http://localhost:5000/api/dynamic-options/${dept._id}`, { ...dept, code: editingOption && editingOption._id === dept._id ? editingOption.code : dept.code }); fetchDynamicOptions(); } catch (err) { console.error('Error saving code:', err); } }} sx={{ color: '#2e7d32' }}>
+                                    <Save />
+                                  </IconButton>
+                                  <IconButton size="small" title="Delete" onClick={() => handleDeleteOption(dept._id)} sx={{ color: '#f44336' }}>
+                                    <Delete />
+                                  </IconButton>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
                     </Box>
-                  ))}
-                  <Button
-                    variant="outlined"
-                    fullWidth
-                    sx={{ 
-                      mt: 2,
-                      borderRadius: 2,
-                      borderColor: '#4caf50',
-                      color: '#4caf50',
-                      '&:hover': {
-                        borderColor: '#45a049',
-                        backgroundColor: 'rgba(76, 175, 80, 0.04)'
-                      }
-                    }}
-                    onClick={() => {
-                      setNewOption({ type: 'department', value: '', parentCategory: '' });
-                      setAddOptionDialog(true);
-                    }}
-                  >
-                    Add Department
-                  </Button>
-                </Paper>
-              </Grid>
 
-              {/* Subcategories */}
-              <Grid item xs={12} md={4}>
-                <Paper elevation={3} sx={{ p: 3, borderRadius: 3, height: 'fit-content' }}>
-                  <Box display="flex" alignItems="center" mb={3}>
-                    <BarChart sx={{ mr: 2, color: '#ff9800' }} />
-                    <Typography variant="h6" sx={{ fontWeight: 600, color: '#2c3e50' }}>
-                      Subcategories
-                    </Typography>
-                  </Box>
-                  <Divider sx={{ mb: 3 }} />
-                  {subCategories.map((sub) => (
-                    <Box 
-                      key={sub._id} 
-                      sx={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center', 
-                        mb: 2,
-                        p: 2,
-                        borderRadius: 2,
-                        backgroundColor: '#f8f9fa',
-                        '&:hover': {
-                          backgroundColor: '#e9ecef'
-                        }
-                      }}
-                    >
-                      <Box>
-                        <Typography sx={{ fontWeight: 500 }}>{sub.value}</Typography>
-                        <Typography variant="caption" sx={{ color: '#666' }}>
-                          ({sub.parentCategory})
-                        </Typography>
-                      </Box>
-                      <Box>
-                        <IconButton 
-                          size="small" 
-                          onClick={() => {
-                            setEditingOption(sub);
-                            setEditOptionDialog(true);
-                          }}
-                          sx={{ color: '#ff9800' }}
+                    {/* Subcategories Panel */}
+                    <Box sx={{ flex: '1 1 340px', minWidth: 300 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>Subcategories</Typography>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          sx={{ borderRadius: 2, textTransform: 'none' }}
+                          onClick={() => { setNewOption({ type: 'subCategory', value: '', parentCategory: '' }); setAddOptionDialog(true); }}
                         >
-                          <Edit />
-                        </IconButton>
-                        <IconButton 
-                          size="small" 
-                          onClick={() => handleDeleteOption(sub._id)}
-                          sx={{ color: '#f44336' }}
-                        >
-                          <Delete />
-                        </IconButton>
+                          Add
+                        </Button>
                       </Box>
+                      <TableContainer>
+                        <Table size="small">
+                          <TableHead>
+                            <TableRow>
+                              <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
+                              <TableCell sx={{ fontWeight: 600 }}>Parent</TableCell>
+                              <TableCell align="right" sx={{ fontWeight: 600 }}>Actions</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {subCategories.map((sub) => (
+                              <TableRow key={sub._id} hover>
+                                <TableCell sx={{ fontWeight: 500 }}>{sub.value}</TableCell>
+                                <TableCell>
+                                  <Chip label={sub.parentCategory} size="small" />
+                                </TableCell>
+                                <TableCell align="right">
+                                  <IconButton size="small" onClick={() => { setEditingOption(sub); setEditOptionDialog(true); }} sx={{ color: '#ff9800' }}>
+                                    <Edit />
+                                  </IconButton>
+                                  <IconButton size="small" onClick={() => handleDeleteOption(sub._id)} sx={{ color: '#f44336' }}>
+                                    <Delete />
+                                  </IconButton>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
                     </Box>
-                  ))}
-                  <Button
-                    variant="outlined"
-                    fullWidth
-                    sx={{ 
-                      mt: 2,
-                      borderRadius: 2,
-                      borderColor: '#ff9800',
-                      color: '#ff9800',
-                      '&:hover': {
-                        borderColor: '#f57c00',
-                        backgroundColor: 'rgba(255, 152, 0, 0.04)'
-                      }
-                    }}
-                    onClick={() => {
-                      setNewOption({ type: 'subCategory', value: '', parentCategory: '' });
-                      setAddOptionDialog(true);
-                    }}
-                  >
-                    Add Subcategory
-                  </Button>
-                </Paper>
+                  </Box>
+                </SectionCard>
               </Grid>
             </Grid>
           </Box>
@@ -1092,6 +1030,15 @@ const AdminDashboard = () => {
               onChange={(e) => setNewOption({ ...newOption, value: e.target.value })}
               sx={{ mb: 3, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
             />
+            {newOption.type === 'department' && (
+              <TextField
+                fullWidth
+                label="Department Code"
+                value={newOption.code}
+                onChange={(e) => setNewOption({ ...newOption, code: e.target.value })}
+                sx={{ mb: 3, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+              />
+            )}
             {newOption.type === 'subCategory' && (
               <FormControl fullWidth sx={{ mb: 3 }}>
                 <InputLabel>Parent Category</InputLabel>
@@ -1164,6 +1111,15 @@ const AdminDashboard = () => {
               onChange={(e) => setEditingOption({ ...editingOption, value: e.target.value })}
               sx={{ mb: 3, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
             />
+            {editingOption?.type === 'department' && (
+              <TextField
+                fullWidth
+                label="Department Code"
+                value={editingOption?.code || ''}
+                onChange={(e) => setEditingOption({ ...editingOption, code: e.target.value })}
+                sx={{ mb: 3, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+              />
+            )}
             {editingOption?.type === 'subCategory' && (
               <FormControl fullWidth sx={{ mb: 3 }}>
                 <InputLabel>Parent Category</InputLabel>

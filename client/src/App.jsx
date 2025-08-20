@@ -11,18 +11,12 @@ import SubmitComplaint from './pages/SubmitComplaint';
 import TrackComplaint from './pages/TrackComplaint';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminLayout from './components/AdminLayout';
-import Dashboard from './pages/Dashboard';
 import FAQs from './pages/FAQs';
 import Contact from './pages/Contact';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import FeedbackForm from './pages/FeedbackForm';
 import Studentdash from './pages/Studentdash'
-import AllComplaints from './pages/AllComplaints';
-import ResolvedComplaints from './pages/ResolvedComplaints';
-import PendingComplaints from './pages/PendingComplaints';
-import ReopenedComplaints from './pages/ReopendComplaints';
-import EscalatedComplaints from './pages/EscalatedComplaints';
-import ManageOptions from './pages/ManageOptions';
+
 
 // Create theme
 const theme = createTheme({
@@ -102,7 +96,7 @@ function App() {
       <CssBaseline />
       <AuthProvider>
         <Router>
-          <Box sx={{ height: '100vh', backgroundColor: 'background.default', overflow: 'hidden' }}>
+          <Box sx={{ height: '150vh', backgroundColor: 'background.default', overflow: 'hidden' }}>
           <Box component="main" sx={{ pt: 8, pb: 4, height: 'calc(100vh - 64px)', overflow: 'auto' }}>
             <ConditionalHeader />
 
@@ -112,12 +106,7 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/faqs" element={<FAQs />} />
               <Route path="/contact" element={<Contact />} />
-              <Route path="/all-complaints" element={<AllComplaints />} />
-              <Route path="/resolved-complaints" element={<ResolvedComplaints />} />
-              <Route path="pending-complaints" element={<PendingComplaints/>}/>
-              <Route path="reopen-complaints" element={<ReopenedComplaints/>}/>
-              <Route path="escalated-complaints" element={<EscalatedComplaints/>}/>
-              
+            
               {/* Protected Routes (need authentication) */}
               <Route path="/submit-complaint" element={
                 <ProtectedRoute>
@@ -146,11 +135,7 @@ function App() {
                   <Studentdash />
                 </ProtectedRoute>
               } />
-              <Route path="/manage-options" element={
-                <ProtectedRoute>
-                  <ManageOptions />
-                </ProtectedRoute>
-              } />
+            
               
               {/* Default redirect to home */}
               <Route path="*" element={<Navigate to="/" replace />} />
