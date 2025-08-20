@@ -4,7 +4,7 @@ import AdminSidebar from './AdminSidebar';
 
 const AdminLayout = ({ children }) => {
   return (
-    <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+    <Box sx={{ display: 'flex', height: '200vh', overflow: 'hidden' }}>
       <AdminSidebar />
       <Box
         component="main"
