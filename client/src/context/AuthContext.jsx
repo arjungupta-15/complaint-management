@@ -1,5 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+
 import axios from 'axios'; // Added axios import
+
+
+import axios from 'axios'; // Added axios import
+
+import axios from 'axios'
+
+
 
 const AuthContext = createContext();
 
@@ -14,8 +22,6 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
-  // Removed otpData state as OTP will be handled by backend
-  // const [otpData, setOtpData] = useState(null);
 
   // Check if user is already logged in on app start
   useEffect(() => {
@@ -32,6 +38,17 @@ export const AuthProvider = ({ children }) => {
       axios.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`;
     } else {
       // Ensure we are not authenticated if no valid session found
+
+    const savedToken = localStorage.getItem('token');
+    
+    if (savedUser && savedAuth === 'true' && savedToken) {
+      const parsedUser = JSON.parse(savedUser);
+      setUser({ ...parsedUser , token: savedToken });
+      setIsAuthenticated(true);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`;
+    } else {
+      
+
       setUser(null);
       setIsAuthenticated(false);
       localStorage.removeItem('user');
@@ -67,7 +84,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Verify OTP - now calls backend for verification
+
   const verifyOTP = async (email, otp) => {
     try {
       const response = await axios.post('http://localhost:5000/api/auth/student/verify-otp', { email, otp });
@@ -98,6 +115,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+
   // Admin login function (already updated)
   const loginAdmin = async ({ email, password }) => {
     try {
@@ -105,6 +123,18 @@ export const AuthProvider = ({ children }) => {
         email,
         password,
       });
+
+
+
+  // Admin login function
+// Admin login function (already updated)
+  const loginAdmin = async ({ email, password }) => {
+    try {
+      const response = await axios.post('http://localhost:5000/api/auth/admin/login', {
+        email,
+        password,
+      });
+
 
       const { token } = response.data;
       const userInfo = {
@@ -127,6 +157,7 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Admin login failed:', error.response?.data?.error || error.message);
       throw new Error(error.response?.data?.error || 'Invalid admin credentials');
+
     }
   };
 
@@ -162,7 +193,47 @@ export const AuthProvider = ({ children }) => {
       console.error('Admin signup failed:', error.response?.data?.error || error.message);
       throw new Error(error.response?.data?.error || 'Failed to create admin account.');
     }
+
+    }
   };
+  
+   // Student signup function
+  const signupStudent = async ({ name, email, password }) => {
+    try {
+      const response = await axios.post('http://localhost:5000/api/auth/student/signup', {
+        name,
+        email,
+        password,
+      });
+      // Assuming signup automatically logs in or returns a token to log in
+      // For now, after successful signup, we can navigate to login page or auto-login
+      // If auto-login, you'd get token and set user/isAuthenticated here
+      console.log('Student signup response:', response.data);
+      return true; // Indicate success
+    } catch (error) {
+      console.error('Student signup failed:', error.response?.data?.error || error.message);
+      throw new Error(error.response?.data?.error || 'Failed to create account.');
+    }
+  };
+  
+    // Admin signup function (new)
+  const signupAdmin = async ({ email, password }) => {
+    try {
+      const response = await axios.post('http://localhost:5000/api/auth/admin/signup', {
+        email,
+        password,
+      });
+      console.log('Admin signup response:', response.data);
+      return true; // Indicate success
+    } catch (error) {
+      console.error('Admin signup failed:', error.response?.data?.error || error.message);
+      throw new Error(error.response?.data?.error || 'Failed to create admin account.');
+    }
+  };
+
+    
+
+
 
   // Student login function (triggers OTP generation on backend)
   const loginStudent = async ({ email, password }) => {
@@ -176,7 +247,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Logout function
+ // Logout function
   const logout = () => {
     setUser(null);
     setIsAuthenticated(false);
@@ -188,7 +259,8 @@ export const AuthProvider = ({ children }) => {
     delete axios.defaults.headers.common['Authorization']; // Clear auth header
   };
 
-  const value = {
+
+ const value = {
     isAuthenticated,
     user,
     generateOTP,
