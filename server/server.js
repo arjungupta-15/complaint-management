@@ -7,11 +7,13 @@ const authRoutes = require('./routes/authRoutes');
 const feedbackRoutes = require('./routes/feedbackRoutes');
 const contactRoutes = require('./routes/contactRoutes');
 const complaintRoutes = require('./routes/complaintRoutes');
-<<<<<<< HEAD
+
 const dynamicOptionRoutes = require('./routes/dynamicOptionRoutes');
 const DynamicOption = require('./models/DynamicOption');
-=======
->>>>>>> 0d908ec6bccfb7c73b319a94466c77a6c5c82006
+
+const dynamicOptionRoutes = require('./routes/dynamicOptionRoutes');
+const DynamicOption = require('./models/DynamicOption');
+
 const Admin = require('./models/Admin');
 const Student = require('./models/Student');
 dotenv.config();
